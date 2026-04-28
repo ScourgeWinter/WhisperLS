@@ -23,6 +23,8 @@ namespace FasterWhisperGui
         private const int    GWL_EXSTYLE       = -20;
         private const long   WS_EX_LAYERED     = 0x00080000L;
         private const uint   LWA_ALPHA         = 0x00000002;
+        private static readonly Color ChromeTopColor = Color.FromArgb(255, 84, 214, 255);
+        private static readonly Color ChromeTextColor = Color.FromArgb(255, 237, 234, 232);
 
         public App()
         {
@@ -40,14 +42,14 @@ namespace FasterWhisperGui
             if (window.Content is not Frame rootFrame)
             {
                 rootFrame = new Frame();
-                rootFrame.Background = new SolidColorBrush(Color.FromArgb(255, 15, 17, 21));
+                rootFrame.Background = new SolidColorBrush(ChromeTopColor);
                 rootFrame.Opacity = 1;
                 rootFrame.NavigationFailed += OnNavigationFailed;
                 window.Content = rootFrame;
             }
             else
             {
-                rootFrame.Background = new SolidColorBrush(Color.FromArgb(255, 15, 17, 21));
+                rootFrame.Background = new SolidColorBrush(ChromeTopColor);
                 rootFrame.Opacity = 1;
             }
 
@@ -166,12 +168,14 @@ namespace FasterWhisperGui
                 presenter.IsMaximizable = false;
                 presenter.IsMinimizable = true;
                 presenter.IsResizable = false;
-                presenter.SetBorderAndTitleBar(false, false);
+                presenter.SetBorderAndTitleBar(true, false);
             }
 
             var hwnd = WindowNative.GetWindowHandle(MainWindow);
+            InstallWindowChromeSubclass(hwnd);
             RemoveNativeResizeBorder(hwnd);
             ApplyNativeWindowColors(hwnd);
+            ApplyAppWindowTitleBarColors(MainWindow);
         }
 
         private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
@@ -227,6 +231,70 @@ namespace FasterWhisperGui
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int pvAttribute, int cbAttribute);
 
+        private static void ApplyAppWindowTitleBarColors(Window window)
+        {
+            if (!AppWindowTitleBar.IsCustomizationSupported())
+            {
+                return;
+            }
+
+            window.ExtendsContentIntoTitleBar = true;
+
+            var transparent = Color.FromArgb(0, 0, 0, 0);
+            var buttonHover = Color.FromArgb(32, 255, 255, 255);
+            var buttonPressed = Color.FromArgb(48, 255, 255, 255);
+            var titleBar = window.AppWindow.TitleBar;
+
+            titleBar.ExtendsContentIntoTitleBar = true;
+            titleBar.BackgroundColor = ChromeTopColor;
+            titleBar.InactiveBackgroundColor = ChromeTopColor;
+            titleBar.ForegroundColor = ChromeTextColor;
+            titleBar.InactiveForegroundColor = ChromeTextColor;
+            titleBar.ButtonForegroundColor = ChromeTextColor;
+            titleBar.ButtonInactiveForegroundColor = ChromeTextColor;
+            titleBar.ButtonBackgroundColor = transparent;
+            titleBar.ButtonInactiveBackgroundColor = transparent;
+            titleBar.ButtonHoverForegroundColor = ChromeTextColor;
+            titleBar.ButtonHoverBackgroundColor = buttonHover;
+            titleBar.ButtonPressedForegroundColor = ChromeTextColor;
+            titleBar.ButtonPressedBackgroundColor = buttonPressed;
+        }
+
+        private static void InstallWindowChromeSubclass(nint hwnd)
+        {
+            if (chromeSubclassInstalled)
+            {
+                return;
+            }
+
+            chromeSubclassInstalled = SetWindowSubclass(hwnd, WindowChromeSubclass, WindowChromeSubclassId, nuint.Zero);
+        }
+
+        private static nint HandleWindowChromeMessage(
+            nint hwnd,
+            uint message,
+            nint wParam,
+            nint lParam,
+            nuint subclassId,
+            nuint refData)
+        {
+            const uint WM_NCCALCSIZE = 0x0083;
+            const uint WM_NCDESTROY = 0x0082;
+
+            if (message == WM_NCCALCSIZE && wParam != nint.Zero)
+            {
+                return nint.Zero;
+            }
+
+            if (message == WM_NCDESTROY)
+            {
+                _ = RemoveWindowSubclass(hwnd, WindowChromeSubclass, subclassId);
+                chromeSubclassInstalled = false;
+            }
+
+            return DefSubclassProc(hwnd, message, wParam, lParam);
+        }
+
         private static void RemoveNativeResizeBorder(nint hwnd)
         {
             const long WS_CAPTION    = 0x00C00000L;
@@ -276,5 +344,26 @@ namespace FasterWhisperGui
 
         [DllImport("user32.dll")]
         private static extern bool SetLayeredWindowAttributes(nint hwnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        private delegate nint SubclassProc(
+            nint hwnd,
+            uint message,
+            nint wParam,
+            nint lParam,
+            nuint subclassId,
+            nuint refData);
+
+        private const nuint WindowChromeSubclassId = 1;
+        private static readonly SubclassProc WindowChromeSubclass = HandleWindowChromeMessage;
+        private static bool chromeSubclassInstalled;
+
+        [DllImport("comctl32.dll", SetLastError = true)]
+        private static extern bool SetWindowSubclass(nint hwnd, SubclassProc subclassProc, nuint subclassId, nuint refData);
+
+        [DllImport("comctl32.dll", SetLastError = true)]
+        private static extern bool RemoveWindowSubclass(nint hwnd, SubclassProc subclassProc, nuint subclassId);
+
+        [DllImport("comctl32.dll")]
+        private static extern nint DefSubclassProc(nint hwnd, uint message, nint wParam, nint lParam);
     }
 }

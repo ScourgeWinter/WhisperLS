@@ -74,7 +74,7 @@ namespace FasterWhisperGui.Views
                 presenter.IsMaximizable = false;
                 presenter.IsMinimizable = true;
                 presenter.IsResizable = false;
-                presenter.SetBorderAndTitleBar(false, false);
+                presenter.SetBorderAndTitleBar(true, false);
             }
 
             App.SuppressNativeChrome();
