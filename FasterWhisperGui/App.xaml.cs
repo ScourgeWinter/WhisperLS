@@ -212,7 +212,7 @@ namespace FasterWhisperGui
             var darkMode         = 1;
             var roundCorners     = DWMWCP_ROUND;
             var frameBorderColor = unchecked((int)0xFFFFFFFE);
-            var windowBackground = 0x0015110F;
+            var windowBackground = 0x00FFD654;
             var textColor        = 0x00EDEAE8;
             var zeroFrameBorder  = 0;
 
