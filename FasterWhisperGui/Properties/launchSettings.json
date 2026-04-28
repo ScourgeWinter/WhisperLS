@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "FasterWhisperGui (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "FasterWhisperGui (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

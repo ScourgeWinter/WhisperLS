@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Whisper/model/runtime outputs
+audio.*
+*_trascrizione.txt
+*_trascrizione.srt
+*_trascrizione.docx
+
+# .NET / WinUI build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.rsuser
+*.suo
+
+# Local IDE/agent files
+.vscode/
+.claude/
+
+# Local reference scaffold not needed by the app
+RecoveryReference/
