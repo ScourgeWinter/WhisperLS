@@ -13,6 +13,40 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <Color x:Key="ElectricBlueColor">#29B6FF</Color>
+            <Color x:Key="ElectricBlueHoverColor">#63CAFF</Color>
+            <Color x:Key="WindowBackgroundColor">#090D14</Color>
+            <Color x:Key="WorkspaceBackgroundColor">#111824</Color>
+            <Color x:Key="InsetBackgroundColor">#0C121C</Color>
+
+            <SolidColorBrush x:Key="ElectricBlueBrush" Color="{StaticResource ElectricBlueColor}" />
+            <SolidColorBrush x:Key="ElectricBlueHoverBrush" Color="{StaticResource ElectricBlueHoverColor}" />
+            <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{StaticResource WindowBackgroundColor}" />
+            <SolidColorBrush x:Key="WorkspaceBackgroundBrush" Color="{StaticResource WorkspaceBackgroundColor}" />
+            <SolidColorBrush x:Key="InsetBackgroundBrush" Color="{StaticResource InsetBackgroundColor}" />
+            <SolidColorBrush x:Key="MutedStrokeBrush" Color="#26364A" />
+            <SolidColorBrush x:Key="MutedTextBrush" Color="#91A2B8" />
+            <SolidColorBrush x:Key="TitleBarHoverBrush" Color="#172232" />
+            <SolidColorBrush x:Key="CloseHoverBrush" Color="#D13438" />
+            <SolidColorBrush x:Key="LogInfoBrush" Color="#BDE9FF" />
+            <SolidColorBrush x:Key="LogNeutralBrush" Color="#A9B6C7" />
+            <SolidColorBrush x:Key="LogProgressBrush" Color="#29B6FF" />
+            <SolidColorBrush x:Key="LogModelBrush" Color="#83D9FF" />
+            <SolidColorBrush x:Key="LogMetadataBrush" Color="#C5A7FF" />
+            <SolidColorBrush x:Key="LogOutputBrush" Color="#76E0B0" />
+            <SolidColorBrush x:Key="LogSuccessBrush" Color="#62D995" />
+            <SolidColorBrush x:Key="LogWarningBrush" Color="#FFD166" />
+            <SolidColorBrush x:Key="LogErrorBrush" Color="#FF6B75" />
+            <SolidColorBrush x:Key="LogTimestampBrush" Color="#64748B" />
+            <SolidColorBrush x:Key="StatusSuccessBrush" Color="#62D995" />
+            <SolidColorBrush x:Key="StatusSuccessBackgroundBrush" Color="#183527" />
+            <SolidColorBrush x:Key="StatusMissingBrush" Color="#A9B6C7" />
+            <SolidColorBrush x:Key="StatusMissingBackgroundBrush" Color="#202A38" />
+            <SolidColorBrush x:Key="AppropriatenessHighBrush" Color="#62D995" />
+            <SolidColorBrush x:Key="AppropriatenessMediumBrush" Color="#FFD166" />
+            <SolidColorBrush x:Key="AppropriatenessLowBrush" Color="#FF8A80" />
+            <SolidColorBrush x:Key="DangerActionBrush" Color="#C42B1C" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

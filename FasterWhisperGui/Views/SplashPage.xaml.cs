@@ -12,10 +12,6 @@ namespace FasterWhisperGui.Views
 
         private async void SplashPage_Loaded(object sender, RoutedEventArgs e)
         {
-            // Must be synchronous (before any await) to prevent WinUI from drawing
-            // a default title-bar strip at the top of the window
-            App.MainWindow?.SetTitleBar(SplashRoot);
-
             try
             {
                 var loaded = new TaskCompletionSource();
@@ -23,13 +19,14 @@ namespace FasterWhisperGui.Views
                 SplashImage.ImageFailed += (_, _) => loaded.TrySetResult();
                 await Task.WhenAny(loaded.Task, Task.Delay(250));
 
-                await App.RevealStartupWindowAsync();
                 await PlayEntranceAsync();
-                await Task.Delay(1000);
+                await Task.Delay(600);
                 await PlayExitAsync();
-                await App.ExpandToFullSizeAsync();
             }
-            catch { }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Debug.WriteLine(exception);
+            }
             finally
             {
                 Frame?.Navigate(typeof(MainPage), null, new SuppressNavigationTransitionInfo());

@@ -1,0 +1,4 @@
+# Runtime NVIDIA ufficiale per la distribuzione Full win-x64.
+# Il driver grafico NVIDIA resta un requisito di sistema.
+nvidia-cublas-cu12==12.9.1.4
+nvidia-cudnn-cu12==9.19.0.56

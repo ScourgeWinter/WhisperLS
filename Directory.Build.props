@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>WhisperLS</Product>
+    <Authors>ScourgeWinter</Authors>
+    <Copyright>Copyright © 2026 ScourgeWinter</Copyright>
+  </PropertyGroup>
+</Project>

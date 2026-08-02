@@ -5,304 +5,1191 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    Background="#54D6FF">
+    Background="{StaticResource WindowBackgroundBrush}"
+    mc:Ignorable="d">
 
-    <Grid>
-        <Grid.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#54D6FF" Offset="0" />
-                <GradientStop Color="#4E6BFF" Offset="0.52" />
-                <GradientStop Color="#D025FF" Offset="1" />
-            </LinearGradientBrush>
-        </Grid.Background>
+    <Page.Resources>
+        <Style x:Key="ChromeButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="CharacterSpacing" Value="80" />
+            <Setter Property="Foreground" Value="{StaticResource ElectricBlueBrush}" />
+        </Style>
+        <Style x:Key="InfoIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="MinWidth" Value="22" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+        </Style>
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="88" />
+            <Setter Property="Padding" Value="9,3" />
+            <Setter Property="Background" Value="{StaticResource DangerActionBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DangerActionBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+    </Page.Resources>
 
-        <Border
-            Margin="4"
-            Background="#0F1115"
-            CornerRadius="0,0,18,18">
-            <Grid x:Name="RootGrid" Background="Transparent">
-            <Grid.RenderTransform>
-                <TranslateTransform x:Name="MainContentTransform" />
-            </Grid.RenderTransform>
+    <Border
+        x:Name="WindowShell"
+        Background="{StaticResource WindowBackgroundBrush}"
+        BorderBrush="{StaticResource ElectricBlueBrush}"
+        BorderThickness="2"
+        CornerRadius="10"
+        Opacity="0">
+        <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="38" />
+                <RowDefinition Height="46" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Border
-                Grid.Row="0"
-                IsHitTestVisible="False">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#54D6FF" Offset="0" />
-                        <GradientStop Color="#4E6BFF" Offset="0.52" />
-                        <GradientStop Color="#D025FF" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
-
             <Grid
-                x:Name="TitleBarGrid"
+                x:Name="CustomTitleBar"
                 Grid.Row="0"
-                Background="Transparent">
+                Background="{StaticResource InsetBackgroundBrush}">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="44" />
-                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Border
-                    x:Name="DragRegion"
+                <StackPanel
                     Grid.Column="0"
+                    Margin="14,0,0,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="10">
+                    <Border
+                        Width="24"
+                        Height="24"
+                        Background="{StaticResource ElectricBlueBrush}"
+                        CornerRadius="7">
+                        <FontIcon
+                            FontFamily="Segoe Fluent Icons"
+                            FontSize="13"
+                            Foreground="#07101A"
+                            Glyph="&#xE720;" />
+                    </Border>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Text="WhisperLS" />
+                </StackPanel>
+
+                <Grid
+                    x:Name="TitleBarDragRegion"
+                    Grid.Column="1"
                     Background="Transparent" />
 
-                <Button
-                    x:Name="MinimizeButton"
-                    Grid.Column="1"
-                    Width="34"
-                    Height="30"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Background="Transparent"
-                    BorderBrush="#3A414D"
-                    BorderThickness="0"
-                    Click="MinimizeButton_Click"
-                    Content="&#xE921;"
-                    FontFamily="Segoe Fluent Icons"
-                    FontSize="11"
-                    Foreground="#E8EAED" />
-
-                <Button
-                    x:Name="CloseButton"
+                <StackPanel
                     Grid.Column="2"
-                    Width="34"
-                    Height="30"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Click="CloseButton_Click"
-                    Content="&#xE8BB;"
-                    FontFamily="Segoe Fluent Icons"
-                    FontSize="11"
-                    Foreground="#E8EAED" />
+                    Margin="0,4,5,4"
+                    Orientation="Horizontal"
+                    Spacing="2">
+                    <StackPanel.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#172232" />
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#213249" />
+                    </StackPanel.Resources>
+                    <Button
+                        x:Name="OpenModelManagerButton"
+                        Style="{StaticResource ChromeButtonStyle}"
+                        IsTabStop="True"
+                        AutomationProperties.Name="Gestisci modelli"
+                        Click="OpenModelManagerButton_Click"
+                        ToolTipService.ToolTip="Gestisci modelli">
+                        <FontIcon FontSize="14" Glyph="&#xE8F1;" />
+                    </Button>
+                    <Button
+                        x:Name="CheckUpdatesButton"
+                        Style="{StaticResource ChromeButtonStyle}"
+                        IsTabStop="True"
+                        AutomationProperties.Name="Controlla aggiornamenti"
+                        Click="CheckUpdatesButton_Click"
+                        ToolTipService.ToolTip="Controlla aggiornamenti">
+                        <FontIcon FontSize="14" Glyph="&#xE895;" />
+                    </Button>
+                    <Border
+                        Width="1"
+                        Height="20"
+                        Margin="5,0"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource MutedStrokeBrush}"
+                        IsHitTestVisible="False" />
+                    <Button
+                        Style="{StaticResource ChromeButtonStyle}"
+                        AutomationProperties.Name="Riduci a icona"
+                        Click="MinimizeWindowButton_Click"
+                        ToolTipService.ToolTip="Riduci a icona">
+                        <FontIcon FontSize="12" Glyph="&#xE921;" />
+                    </Button>
+                    <Button
+                        x:Name="MaximizeWindowButton"
+                        Style="{StaticResource ChromeButtonStyle}"
+                        AutomationProperties.Name="Massimizza"
+                        Click="MaximizeWindowButton_Click"
+                        ToolTipService.ToolTip="Massimizza">
+                        <FontIcon
+                            x:Name="MaximizeWindowIcon"
+                            FontSize="11"
+                            Glyph="&#xE922;" />
+                    </Button>
+                    <Button
+                        Style="{StaticResource ChromeButtonStyle}"
+                        AutomationProperties.Name="Chiudi"
+                        Click="CloseWindowButton_Click"
+                        ToolTipService.ToolTip="Chiudi">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#D13438" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#A4262C" />
+                        </Button.Resources>
+                        <FontIcon FontSize="11" Glyph="&#xE8BB;" />
+                    </Button>
+                </StackPanel>
             </Grid>
 
-            <ScrollViewer
-                Grid.Row="1"
-                HorizontalScrollBarVisibility="Disabled"
-                VerticalScrollBarVisibility="Auto">
-                <Grid Padding="18,6,18,12">
-                    <Border
-                        x:Name="ShellPanel"
-                        Width="620"
-                        MaxWidth="620"
+            <Grid Grid.Row="1">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#0D1420" />
+                        <GradientStop Offset="0.55" Color="#090D14" />
+                        <GradientStop Offset="1" Color="#08111B" />
+                    </LinearGradientBrush>
+                </Grid.Background>
+
+                <ScrollViewer
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+                    <StackPanel
+                        x:Name="ContentRoot"
+                        MaxWidth="680"
+                        Padding="30,24,30,32"
                         HorizontalAlignment="Center"
-                        Padding="22"
-                        Background="#181B21"
-                        BorderBrush="#2A303A"
-                        BorderThickness="1"
-                        CornerRadius="12">
-                        <StackPanel Spacing="14">
-                            <StackPanel Spacing="2">
-                                <TextBlock
-                                    Text="WhisperLS - Made with love ♥"
-                                    FontSize="22"
-                                    FontWeight="SemiBold"
-                                    Foreground="#F4F6FA"
-                                    TextAlignment="Center" />
-                                <TextBlock
-                                    Text="Scegli una traccia audio o video e lascia che il tool ti guidi."
-                                    FontSize="12"
-                                    Foreground="#9AA3AF"
-                                    TextAlignment="Center"
-                                    TextWrapping="WrapWholeWords" />
-                            </StackPanel>
+                        Spacing="18">
 
-                            <StackPanel Spacing="4">
-                                <Grid ColumnSpacing="10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            Spacing="4">
+                            <TextBlock
+                                FontSize="30"
+                                FontWeight="SemiBold"
+                                Text="WhisperLS - Made with love ❤️"
+                                TextAlignment="Center"
+                                TextWrapping="WrapWholeWords" />
+                            <TextBlock
+                                Foreground="{StaticResource MutedTextBrush}"
+                                Text="Sistema offline integrato di trascrizione audio-to-text."
+                                TextAlignment="Center"
+                                TextWrapping="WrapWholeWords" />
+                        </StackPanel>
 
-                                    <Border
-                                        Grid.Column="0"
-                                        Height="42"
-                                        Padding="14,0"
-                                        Background="#101318"
-                                        BorderBrush="#2D333D"
-                                        BorderThickness="1"
-                                        CornerRadius="8">
-                                        <TextBlock
-                                            x:Name="FileNameText"
+                        <Border
+                            x:Name="WorkspaceCard"
+                            Padding="18"
+                            Background="{StaticResource WorkspaceBackgroundBrush}"
+                            BorderBrush="{StaticResource MutedStrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14">
+                            <StackPanel Spacing="12">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Style="{StaticResource SectionLabelStyle}" Text="FILE SORGENTE" />
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border
+                                            MinHeight="46"
+                                            Padding="13,0"
                                             VerticalAlignment="Center"
-                                            FontSize="12"
-                                            Foreground="#8D96A3"
-                                            Text="Nessun file selezionato"
-                                            TextTrimming="CharacterEllipsis" />
-                                    </Border>
+                                            Background="{StaticResource InsetBackgroundBrush}"
+                                            BorderBrush="{StaticResource MutedStrokeBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                            <StackPanel
+                                                VerticalAlignment="Center"
+                                                Orientation="Horizontal"
+                                                Spacing="10">
+                                                <FontIcon
+                                                    FontSize="16"
+                                                    Foreground="{StaticResource ElectricBlueBrush}"
+                                                    Glyph="&#xE8B7;" />
+                                                <TextBlock
+                                                    x:Name="FileNameText"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{StaticResource MutedTextBrush}"
+                                                    Text="Nessun file selezionato"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Button
+                                            x:Name="BrowseFileButton"
+                                            Grid.Column="1"
+                                            MinWidth="130"
+                                            MinHeight="46"
+                                            AutomationProperties.Name="Seleziona una o più tracce audio o video"
+                                            Click="BrowseFileButton_Click"
+                                            Content="Scegli tracce"
+                                            Style="{StaticResource AccentButtonStyle}" />
+                                    </Grid>
+                                    <TextBlock
+                                        x:Name="SelectedPartsText"
+                                        MaxLines="4"
+                                        FontSize="11"
+                                        Foreground="{StaticResource MutedTextBrush}"
+                                        TextWrapping="Wrap"
+                                        Visibility="Collapsed" />
+                                    <Grid
+                                        x:Name="QueueOrderControls"
+                                        ColumnSpacing="6"
+                                        Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            x:Name="QueueOrderComboBox"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.Name="Traccia da riordinare" />
+                                        <Button
+                                            Grid.Column="1"
+                                            AutomationProperties.Name="Sposta traccia su"
+                                            Click="MoveQueueItemUpButton_Click">
+                                            <FontIcon Glyph="&#xE70E;" />
+                                        </Button>
+                                        <Button
+                                            Grid.Column="2"
+                                            AutomationProperties.Name="Sposta traccia giù"
+                                            Click="MoveQueueItemDownButton_Click">
+                                            <FontIcon Glyph="&#xE70D;" />
+                                        </Button>
+                                    </Grid>
+                                    <ComboBox
+                                        x:Name="MultiFileModeComboBox"
+                                        MaxWidth="310"
+                                        HorizontalAlignment="Left"
+                                        Header="Modalità delle tracce"
+                                        AutomationProperties.HelpText="Scegli se unire le tracce nello stesso documento oppure elaborarle come lavori separati"
+                                        SelectionChanged="MultiFileModeComboBox_SelectionChanged"
+                                        Visibility="Collapsed">
+                                        <ComboBoxItem Content="Unica trascrizione multiparte" Tag="multipart" />
+                                        <ComboBoxItem Content="Lavori separati in coda" Tag="batch" />
+                                    </ComboBox>
+                                </StackPanel>
 
-                                    <Button
-                                        Grid.Column="1"
-                                        MinWidth="118"
-                                        Height="42"
-                                        Padding="16,0"
-                                        Click="BrowseFileButton_Click"
-                                        Content="Seleziona" />
-                                </Grid>
-
-                                <TextBlock
-                                    x:Name="FileStatusText"
-                                    FontSize="12"
-                                    Foreground="#9AA3AF"
-                                    Text=""
-                                    TextWrapping="WrapWholeWords" />
-                            </StackPanel>
-
-                            <StackPanel
-                                x:Name="ModelSelectorPanel"
-                                Spacing="7"
-                                Opacity="0"
-                                Visibility="Collapsed">
-                                <StackPanel.RenderTransform>
-                                    <TranslateTransform x:Name="ModelSelectorTransform" Y="14" />
-                                </StackPanel.RenderTransform>
-
-                                <TextBlock
-                                    FontSize="13"
-                                    FontWeight="SemiBold"
-                                    Foreground="#C9D0DA"
-                                    Text="Scegli il modello" />
+                                <Border Height="1" Background="{StaticResource MutedStrokeBrush}" />
 
                                 <Border
-                                    Padding="16,10"
-                                    Background="#101318"
-                                    BorderBrush="#2D333D"
+                                    x:Name="SettingsSummaryPanel"
+                                    Padding="13"
+                                    Background="{StaticResource InsetBackgroundBrush}"
+                                    BorderBrush="{StaticResource MutedStrokeBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="8">
-                                    <StackPanel Spacing="6">
+                                    CornerRadius="8"
+                                    Visibility="Collapsed">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            VerticalAlignment="Center"
+                                            FontSize="17"
+                                            Foreground="{StaticResource ElectricBlueBrush}"
+                                            Glyph="&#xE713;" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock
+                                                x:Name="SettingsSummaryText"
+                                                FontWeight="SemiBold"
+                                                Text="Medium · Italiano · Automatico"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                x:Name="AdvancedSettingsSummaryText"
+                                                Foreground="{StaticResource MutedTextBrush}"
+                                                FontSize="12"
+                                                Text="Beam 5 · VAD attivo · Timestamp disattivati"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                x:Name="OutputSummaryText"
+                                                Foreground="{StaticResource MutedTextBrush}"
+                                                FontSize="12"
+                                                Text="Output: cartella del file sorgente"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Button
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.Name="Modifica impostazioni"
+                                            Click="OpenSettingsDrawerButton_Click"
+                                            Content="Modifica" />
+                                    </Grid>
+                                </Border>
+
+                                <Border
+                                    x:Name="AnalysisPanel"
+                                    Padding="15"
+                                    Background="{StaticResource InsetBackgroundBrush}"
+                                    BorderBrush="{StaticResource MutedStrokeBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Visibility="Collapsed">
+                                    <StackPanel Spacing="10">
                                         <TextBlock
-                                            x:Name="SelectedModelText"
-                                            HorizontalAlignment="Center"
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            Foreground="#F4F6FA"
-                                            Text="tiny" />
-
-                                        <Slider
-                                            x:Name="ModelSlider"
-                                            Height="32"
-                                            Maximum="4"
-                                            Minimum="0"
-                                            SnapsTo="StepValues"
-                                            StepFrequency="1"
-                                            TickFrequency="1"
-                                            ValueChanged="ModelSlider_ValueChanged" />
-
-                                        <Grid>
+                                            x:Name="AnalysisStatusText"
+                                            Text="Analisi in corso..."
+                                            TextWrapping="WrapWholeWords" />
+                                        <ProgressBar
+                                            x:Name="OperationProgressBar"
+                                            Maximum="100"
+                                            Minimum="0" />
+                                        <Grid ColumnSpacing="16">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" FontSize="11" Foreground="#8D96A3" Text="tiny" TextAlignment="Center" />
-                                            <TextBlock Grid.Column="1" FontSize="11" Foreground="#8D96A3" Text="base" TextAlignment="Center" />
-                                            <TextBlock Grid.Column="2" FontSize="11" Foreground="#8D96A3" Text="small" TextAlignment="Center" />
-                                            <TextBlock Grid.Column="3" FontSize="11" Foreground="#8D96A3" Text="medium" TextAlignment="Center" />
-                                            <TextBlock Grid.Column="4" FontSize="11" Foreground="#8D96A3" Text="turbo" TextAlignment="Center" />
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="Durata sorgente" />
+                                                <TextBlock x:Name="SourceDurationText" FontWeight="SemiBold" Text="Non disponibile" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="Tempo indicativo" />
+                                                <TextBlock x:Name="EstimatedTimeText" FontWeight="SemiBold" Text="Non disponibile" />
+                                            </StackPanel>
                                         </Grid>
                                     </StackPanel>
                                 </Border>
-                            </StackPanel>
 
-                            <Border
-                                x:Name="AnalysisPanel"
-                                Padding="14"
-                                Background="#101318"
-                                BorderBrush="#2D333D"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Opacity="0"
-                                Visibility="Collapsed">
-                                <Border.RenderTransform>
-                                    <TranslateTransform x:Name="AnalysisTransform" Y="14" />
-                                </Border.RenderTransform>
+                                <InfoBar
+                                    x:Name="StatusInfoBar"
+                                    IsClosable="False"
+                                    IsOpen="False"
+                                    Severity="Informational"
+                                    Title="Stato" />
 
-                                <StackPanel Spacing="8">
-                                    <TextBlock
-                                        x:Name="AnalysisStatusText"
-                                        FontSize="12"
-                                        Foreground="#C9D0DA"
-                                        Text="Analisi in corso..."
-                                        TextWrapping="WrapWholeWords" />
-
-                                    <ProgressBar
-                                        x:Name="AnalysisProgressBar"
-                                        Height="5"
-                                        Maximum="100"
-                                        Minimum="0"
-                                        Value="0" />
-
-                                    <Grid ColumnSpacing="18">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel Grid.Column="0" Spacing="2">
-                                            <TextBlock FontSize="12" Foreground="#8D96A3" Text="Qualità stimata" />
-                                            <TextBlock x:Name="QualityStarsText" FontSize="16" Foreground="#F5C542" Text="-----" />
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="1" Spacing="2">
-                                            <TextBlock FontSize="12" Foreground="#8D96A3" Text="Tempo stimato" />
-                                            <TextBlock x:Name="TimeStarsText" FontSize="16" Foreground="#7CC7FF" Text="-----" />
-                                            <TextBlock x:Name="EstimatedTimeText" FontSize="12" Foreground="#9AA3AF" Text="" />
-                                        </StackPanel>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <StackPanel
-                                x:Name="ActionPanel"
-                                Spacing="7"
-                                Opacity="0"
-                                Visibility="Collapsed">
-                                <StackPanel.RenderTransform>
-                                    <TranslateTransform x:Name="ActionTransform" Y="14" />
-                                </StackPanel.RenderTransform>
-
-                                <Button
-                                    x:Name="PrimaryActionButton"
-                                    Height="44"
-                                    Click="PrimaryActionButton_Click"
-                                    Content="Elabora la traccia audio"
-                                    Style="{StaticResource AccentButtonStyle}" />
+                                <Grid x:Name="ActionPanel" ColumnSpacing="10" Visibility="Collapsed">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        x:Name="PrimaryActionButton"
+                                        MinHeight="44"
+                                        HorizontalAlignment="Stretch"
+                                        Click="PrimaryActionButton_Click"
+                                        Content="Avvia trascrizione"
+                                        Style="{StaticResource AccentButtonStyle}" />
+                                    <Button
+                                        x:Name="ResumeCheckpointButton"
+                                        Grid.Column="1"
+                                        MinHeight="44"
+                                        AutomationProperties.HelpText="Riprende la trascrizione dal checkpoint rimasto dopo un'interruzione"
+                                        Click="ResumeCheckpointButton_Click"
+                                        Content="Riprendi"
+                                        Visibility="Collapsed" />
+                                    <Button
+                                        x:Name="CancelButton"
+                                        Grid.Column="2"
+                                        MinHeight="44"
+                                        Click="CancelButton_Click"
+                                        Content="Annulla"
+                                        Visibility="Collapsed" />
+                                    <Button
+                                        x:Name="RestoreQueueButton"
+                                        Grid.Column="3"
+                                        MinHeight="44"
+                                        AutomationProperties.HelpText="Ricarica la coda rimasta dopo un'interruzione"
+                                        Click="RestoreQueueButton_Click"
+                                        Content="Ripristina coda"
+                                        Visibility="Collapsed" />
+                                </Grid>
 
                                 <Button
                                     x:Name="OpenOutputButton"
-                                    Height="34"
+                                    MinHeight="40"
+                                    HorizontalAlignment="Stretch"
                                     Click="OpenOutputFolderButton_Click"
                                     Content="Apri cartella output"
                                     Visibility="Collapsed" />
 
-                                <TextBlock
-                                    x:Name="OperationStatusText"
-                                    FontSize="12"
-                                    Foreground="#9AA3AF"
-                                    Text=""
-                                    TextAlignment="Center"
-                                    TextWrapping="WrapWholeWords" />
+                                <StackPanel Spacing="8">
+                                    <Button
+                                        x:Name="ToggleConsoleButton"
+                                        MinHeight="48"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        AutomationProperties.Name="Mostra console"
+                                        Click="ToggleConsoleButton_Click">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon
+                                                VerticalAlignment="Center"
+                                                FontFamily="Segoe Fluent Icons"
+                                                FontSize="15"
+                                                Foreground="{StaticResource ElectricBlueBrush}"
+                                                Glyph="&#xE756;" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                FontWeight="SemiBold"
+                                                Text="Console" />
+                                            <TextBlock
+                                                x:Name="ConsoleToggleStateText"
+                                                Grid.Column="2"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                Foreground="{StaticResource MutedTextBrush}"
+                                                Text="Mostra" />
+                                            <FontIcon
+                                                x:Name="ConsoleToggleIcon"
+                                                Grid.Column="3"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                Glyph="&#xE70D;" />
+                                        </Grid>
+                                    </Button>
+
+                                    <Border
+                                        x:Name="ConsolePanel"
+                                        MaxHeight="0"
+                                        Padding="12"
+                                        Opacity="0"
+                                        Background="#05080D"
+                                        BorderBrush="{StaticResource MutedStrokeBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Visibility="Collapsed">
+                                        <Border.RenderTransform>
+                                            <TranslateTransform
+                                                x:Name="ConsoleSlideTransform"
+                                                Y="-14" />
+                                        </Border.RenderTransform>
+                                        <StackPanel Spacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Ellipse
+                                                    Width="7"
+                                                    Height="7"
+                                                    VerticalAlignment="Center"
+                                                    Fill="{StaticResource ElectricBlueBrush}" />
+                                                <TextBlock
+                                                    FontFamily="Cascadia Mono"
+                                                    FontSize="11"
+                                                    Foreground="{StaticResource MutedTextBrush}"
+                                                    Text="WHISPERLS / OUTPUT" />
+                                            </StackPanel>
+                                            <Grid MinHeight="72" MaxHeight="100" RowSpacing="6">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <ScrollViewer
+                                                    x:Name="ConsoleScrollViewer"
+                                                    HorizontalScrollBarVisibility="Disabled"
+                                                    ViewChanged="ConsoleScrollViewer_ViewChanged"
+                                                    VerticalScrollBarVisibility="Auto">
+                                                    <Grid>
+                                                        <TextBlock
+                                                            x:Name="ConsoleEmptyText"
+                                                            FontFamily="Cascadia Mono"
+                                                            FontSize="12"
+                                                            Foreground="{StaticResource MutedTextBrush}"
+                                                            Text="In attesa di attività..." />
+                                                        <RichTextBlock
+                                                            x:Name="LogRichTextBlock"
+                                                            AutomationProperties.Name="Cronologia della console"
+                                                            FontFamily="Cascadia Mono"
+                                                            FontSize="12"
+                                                            IsTextSelectionEnabled="True"
+                                                            TextWrapping="Wrap" />
+                                                    </Grid>
+                                                </ScrollViewer>
+                                                <Border
+                                                    x:Name="ConsoleLiveProgressPanel"
+                                                    Grid.Row="1"
+                                                    Padding="8,4"
+                                                    AutomationProperties.LiveSetting="Polite"
+                                                    Background="#101A27"
+                                                    BorderBrush="{StaticResource MutedStrokeBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="5"
+                                                    Visibility="Collapsed">
+                                                    <TextBlock
+                                                        x:Name="ConsoleLiveProgressText"
+                                                        AutomationProperties.Name="Avanzamento trascrizione"
+                                                        FontFamily="Cascadia Mono"
+                                                        FontSize="11"
+                                                        Foreground="{StaticResource LogProgressBrush}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                </Border>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Grid
+                    x:Name="SettingsDrawerOverlay"
+                    Background="#B205080D"
+                    Opacity="0"
+                    Tapped="SettingsDrawerOverlay_Tapped"
+                    Visibility="Collapsed">
+                    <Border
+                        x:Name="SettingsDrawer"
+                        Width="430"
+                        Margin="12"
+                        Padding="16"
+                        HorizontalAlignment="Right"
+                        Background="{StaticResource WorkspaceBackgroundBrush}"
+                        BorderBrush="{StaticResource ElectricBlueBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Tapped="SettingsDrawer_Tapped">
+                        <Border.RenderTransform>
+                            <TranslateTransform
+                                x:Name="SettingsDrawerTransform"
+                                X="450" />
+                        </Border.RenderTransform>
+
+                        <Grid RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="2">
+                                    <TextBlock
+                                        FontSize="20"
+                                        FontWeight="SemiBold"
+                                        Text="Impostazioni" />
+                                    <TextBlock
+                                        FontSize="11"
+                                        Foreground="{StaticResource MutedTextBrush}"
+                                        Text="Configura la trascrizione selezionata." />
+                                </StackPanel>
+                                <Button
+                                    Grid.Column="1"
+                                    Width="34"
+                                    Height="34"
+                                    Padding="0"
+                                    AutomationProperties.Name="Chiudi impostazioni"
+                                    Click="CloseSettingsDrawerButton_Click">
+                                    <FontIcon FontSize="11" Glyph="&#xE8BB;" />
+                                </Button>
+                            </Grid>
+
+                            <ScrollViewer
+                                Grid.Row="1"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                                <StackPanel Padding="0,1,4,2" Spacing="6">
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid>
+                                    <ComboBox
+                                        x:Name="ModelComboBox"
+                                        Header="Modello"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        BorderThickness="1"
+                                        SelectionChanged="Settings_SelectionChanged">
+                                        <ComboBox.Resources>
+                                            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#2A323E" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused" Color="#2A323E" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#303A47" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#252D38" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="#3A4655" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedUnfocused" Color="#3A4655" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="#435163" />
+                                            <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPressed" Color="#35404E" />
+                                        </ComboBox.Resources>
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem">
+                                                <Setter Property="Margin" Value="2" />
+                                                <Setter Property="Padding" Value="4,2" />
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="BorderBrush" Value="{Binding ItemBorderBrush}" />
+                                                <Setter Property="BorderThickness" Value="1" />
+                                                <Setter Property="CornerRadius" Value="5" />
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Padding="8,5"
+                                                    HorizontalAlignment="Stretch"
+                                                    AutomationProperties.Name="{Binding AutomationName}"
+                                                    CornerRadius="5">
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Text="{Binding Name}" />
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="10"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{StaticResource StatusSuccessBrush}"
+                                                            Text="Pronto"
+                                                            Visibility="{Binding InstalledLabelVisibility}" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <Border
+                                        x:Name="SelectedModelReadyBorder"
+                                        Height="40"
+                                        VerticalAlignment="Bottom"
+                                        BorderBrush="{StaticResource StatusSuccessBrush}"
+                                        BorderThickness="{Binding SelectedItem.ReadyBorderThickness, ElementName=ModelComboBox}"
+                                        CornerRadius="6"
+                                        IsHitTestVisible="False" />
+                                </Grid>
+                                <ComboBox
+                                    x:Name="LanguageComboBox"
+                                    Grid.Column="1"
+                                    Header="Lingua"
+                                    HorizontalAlignment="Stretch"
+                                    SelectionChanged="Settings_SelectionChanged">
+                                    <ComboBoxItem Content="Italiano" Tag="it" />
+                                    <ComboBoxItem Content="English" Tag="en" />
+                                    <ComboBoxItem Content="Français" Tag="fr" />
+                                    <ComboBoxItem Content="Deutsch" Tag="de" />
+                                    <ComboBoxItem Content="Español" Tag="es" />
+                                    <ComboBoxItem Content="Português" Tag="pt" />
+                                    <ComboBoxItem Content="Rilevamento automatico" Tag="auto" />
+                                </ComboBox>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox
+                                    x:Name="DeviceComboBox"
+                                    HorizontalAlignment="Stretch"
+                                    SelectionChanged="Settings_SelectionChanged">
+                                    <ComboBox.Header>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock VerticalAlignment="Center" Text="Dispositivo" />
+                                            <Button
+                                                Tag="device"
+                                                Style="{StaticResource InfoIconButtonStyle}"
+                                                AutomationProperties.Name="Informazioni sul dispositivo"
+                                                Click="SettingInfoIcon_Click"
+                                                PointerEntered="SettingInfoIcon_PointerEntered"
+                                                PointerExited="SettingInfoIcon_PointerExited">
+                                                <FontIcon FontSize="12" Glyph="&#xE946;" />
+                                            </Button>
+                                        </StackPanel>
+                                    </ComboBox.Header>
+                                    <ComboBoxItem Content="Automatico" Tag="auto" />
+                                    <ComboBoxItem Content="GPU NVIDIA (CUDA)" Tag="cuda" />
+                                    <ComboBoxItem Content="CPU" Tag="cpu" />
+                                </ComboBox>
+                                <NumberBox
+                                    x:Name="BeamSizeNumberBox"
+                                    Grid.Column="1"
+                                    Maximum="20"
+                                    Minimum="1"
+                                    SmallChange="1"
+                                    SpinButtonPlacementMode="Inline"
+                                    Value="5"
+                                    ValueChanged="BeamSizeNumberBox_ValueChanged">
+                                    <NumberBox.Header>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock VerticalAlignment="Center" Text="Beam size" />
+                                            <Button
+                                                Tag="beam"
+                                                Style="{StaticResource InfoIconButtonStyle}"
+                                                AutomationProperties.Name="Informazioni sul beam size"
+                                                Click="SettingInfoIcon_Click"
+                                                PointerEntered="SettingInfoIcon_PointerEntered"
+                                                PointerExited="SettingInfoIcon_PointerExited">
+                                                <FontIcon FontSize="12" Glyph="&#xE946;" />
+                                            </Button>
+                                        </StackPanel>
+                                    </NumberBox.Header>
+                                </NumberBox>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="3">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock VerticalAlignment="Center" Text="Filtro voce (VAD)" />
+                                        <Button
+                                            Tag="vad"
+                                            Style="{StaticResource InfoIconButtonStyle}"
+                                            AutomationProperties.Name="Informazioni sul filtro voce"
+                                            Click="SettingInfoIcon_Click"
+                                            PointerEntered="SettingInfoIcon_PointerEntered"
+                                            PointerExited="SettingInfoIcon_PointerExited">
+                                            <FontIcon FontSize="12" Glyph="&#xE946;" />
+                                        </Button>
+                                    </StackPanel>
+                                    <ToggleSwitch
+                                        x:Name="VadToggle"
+                                        AutomationProperties.Name="Filtro voce (VAD)"
+                                        IsOn="True"
+                                        Toggled="SettingsToggle_Toggled" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock VerticalAlignment="Center" Text="Timestamp per parola" />
+                                        <Button
+                                            Tag="timestamps"
+                                            Style="{StaticResource InfoIconButtonStyle}"
+                                            AutomationProperties.Name="Informazioni sui timestamp per parola"
+                                            Click="SettingInfoIcon_Click"
+                                            PointerEntered="SettingInfoIcon_PointerEntered"
+                                            PointerExited="SettingInfoIcon_PointerExited">
+                                            <FontIcon FontSize="12" Glyph="&#xE946;" />
+                                        </Button>
+                                    </StackPanel>
+                                    <ToggleSwitch
+                                        x:Name="WordTimestampsToggle"
+                                        AutomationProperties.Name="Timestamp per parola"
+                                        Toggled="SettingsToggle_Toggled" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox
+                                    x:Name="LimitIntervalCheckBox"
+                                    VerticalAlignment="Center"
+                                    Content="Solo intervallo"
+                                    AutomationProperties.HelpText="Trascrive soltanto la porzione compresa tra l'inizio e la fine indicate"
+                                    Checked="LimitIntervalCheckBox_Changed"
+                                    Unchecked="LimitIntervalCheckBox_Changed" />
+                                <TextBox
+                                    x:Name="ClipStartTextBox"
+                                    Grid.Column="1"
+                                    AutomationProperties.Name="Inizio intervallo"
+                                    IsEnabled="False"
+                                    PlaceholderText="Da 00:00:00"
+                                    Text="00:00:00"
+                                    TextChanged="ClipTimeTextBox_TextChanged" />
+                                <TextBox
+                                    x:Name="ClipEndTextBox"
+                                    Grid.Column="2"
+                                    AutomationProperties.Name="Fine intervallo"
+                                    IsEnabled="False"
+                                    PlaceholderText="A 00:00:00"
+                                    TextChanged="ClipTimeTextBox_TextChanged" />
+                            </Grid>
+
+                            <StackPanel Spacing="3">
+                                <TextBox
+                                    x:Name="OutputNameTextBox"
+                                    Header="Nome output"
+                                    AutomationProperties.HelpText="Nome senza estensione. Nelle code puoi usare {source}, {index} e {date}"
+                                    PlaceholderText="{}{source}_trascrizione"
+                                    TextChanged="OutputNameTextBox_TextChanged" />
+                                <TextBlock
+                                    x:Name="OutputNamePreviewText"
+                                    Foreground="{StaticResource MutedTextBrush}"
+                                    FontSize="11"
+                                    Text="Anteprima: seleziona una traccia"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox
+                                    x:Name="TxtOutputCheckBox"
+                                    Grid.Column="0"
+                                    HorizontalAlignment="Center"
+                                    AutomationProperties.HelpText="Genera un documento di testo semplice"
+                                    Content="TXT"
+                                    IsChecked="True"
+                                    Checked="OutputFormatCheckBox_Changed"
+                                    Unchecked="OutputFormatCheckBox_Changed" />
+                                <CheckBox
+                                    x:Name="SrtOutputCheckBox"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Center"
+                                    AutomationProperties.HelpText="Genera sottotitoli con indicatori temporali"
+                                    Content="SRT"
+                                    IsChecked="True"
+                                    Checked="OutputFormatCheckBox_Changed"
+                                    Unchecked="OutputFormatCheckBox_Changed" />
+                                <CheckBox
+                                    x:Name="DocxOutputCheckBox"
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Center"
+                                    AutomationProperties.HelpText="Genera un documento Microsoft Word"
+                                    Content="DOCX"
+                                    IsChecked="True"
+                                    Checked="OutputFormatCheckBox_Changed"
+                                    Unchecked="OutputFormatCheckBox_Changed" />
+                            </Grid>
+
+                            <Border
+                                Height="1"
+                                Background="{StaticResource MutedStrokeBrush}" />
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="2">
+                                    <TextBlock FontWeight="SemiBold" Text="Cartella di output" />
+                                    <TextBlock
+                                        x:Name="OutputDirectoryText"
+                                        Foreground="{StaticResource MutedTextBrush}"
+                                        FontSize="12"
+                                        Text="Stessa cartella del file sorgente"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <Button
+                                    x:Name="ChooseOutputFolderButton"
+                                    Grid.Column="1"
+                                    Click="ChooseOutputFolderButton_Click"
+                                    Content="Cambia" />
+                            </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <Button
+                                Grid.Row="2"
+                                MinHeight="40"
+                                HorizontalAlignment="Stretch"
+                                Click="CloseSettingsDrawerButton_Click"
+                                Content="Fatto"
+                                Style="{StaticResource AccentButtonStyle}" />
+
+                        </Grid>
                     </Border>
                 </Grid>
-            </ScrollViewer>
+
+                <Grid
+                    x:Name="ModelManagerOverlay"
+                    Background="#C205080D"
+                    Opacity="0"
+                    Tapped="ModelManagerOverlay_Tapped"
+                    Visibility="Collapsed">
+                    <Border
+                        x:Name="ModelManagerPanel"
+                        Width="646"
+                        MaxHeight="478"
+                        Margin="14"
+                        Padding="18"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource WorkspaceBackgroundBrush}"
+                        BorderBrush="{StaticResource ElectricBlueBrush}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Tapped="ModelManagerPanel_Tapped">
+                        <Border.RenderTransform>
+                            <ScaleTransform
+                                x:Name="ModelManagerScaleTransform"
+                                CenterX="323"
+                                CenterY="239"
+                                ScaleX="0.97"
+                                ScaleY="0.97" />
+                        </Border.RenderTransform>
+
+                        <Grid RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="3">
+                                    <TextBlock
+                                        FontSize="23"
+                                        FontWeight="SemiBold"
+                                        Text="Model Manager" />
+                                    <TextBlock
+                                        Foreground="{StaticResource MutedTextBrush}"
+                                        FontSize="12"
+                                        Text="Disponibilità locale e appropriatezza per questo computer." />
+                                </StackPanel>
+                                <Button
+                                    Grid.Column="1"
+                                    Width="36"
+                                    Height="36"
+                                    Padding="0"
+                                    AutomationProperties.Name="Chiudi Model Manager"
+                                    Click="CloseModelManagerButton_Click">
+                                    <FontIcon FontSize="11" Glyph="&#xE8BB;" />
+                                </Button>
+                            </Grid>
+
+                            <Border
+                                Grid.Row="1"
+                                Padding="12,9"
+                                Background="{StaticResource InsetBackgroundBrush}"
+                                BorderBrush="{StaticResource MutedStrokeBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        VerticalAlignment="Center"
+                                        FontSize="16"
+                                        Foreground="{StaticResource ElectricBlueBrush}"
+                                        Glyph="&#xE950;" />
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock
+                                            x:Name="ModelManagerHardwareText"
+                                            FontWeight="SemiBold"
+                                            Text="Rilevamento hardware..." />
+                                        <TextBlock
+                                            Foreground="{StaticResource MutedTextBrush}"
+                                            FontSize="11"
+                                            Text="La percentuale stima l'equilibrio fra velocità e risorse richieste." />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    x:Name="ModelManagerSummaryText"
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    Foreground="{StaticResource MutedTextBrush}"
+                                    Text="Controllo dei modelli locali..." />
+                                <ProgressRing
+                                    x:Name="ModelManagerProgressRing"
+                                    Grid.Column="1"
+                                    Width="18"
+                                    Height="18"
+                                    IsActive="True" />
+                            </Grid>
+
+                            <ListView
+                                x:Name="ModelManagerListView"
+                                Grid.Row="3"
+                                SelectionMode="None">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Margin" Value="0,0,0,6" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Padding="12,9"
+                                            Background="{StaticResource InsetBackgroundBrush}"
+                                            BorderBrush="{StaticResource MutedStrokeBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="142" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                    <TextBlock
+                                                        FontWeight="SemiBold"
+                                                        Text="{Binding ModelName}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock
+                                                        FontSize="11"
+                                                        Foreground="{StaticResource MutedTextBrush}"
+                                                        Text="{Binding ClassLabel}" />
+                                                </StackPanel>
+
+                                                <StackPanel
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock
+                                                            FontSize="11"
+                                                            Foreground="{StaticResource MutedTextBrush}"
+                                                            Text="Appropriatezza" />
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            FontSize="11"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{Binding ScoreBrush}"
+                                                            Text="{Binding ScoreLabel}" />
+                                                    </Grid>
+                                                    <ProgressBar
+                                                        Height="5"
+                                                        Maximum="100"
+                                                        Foreground="{Binding ScoreBrush}"
+                                                        Value="{Binding Score}" />
+                                                </StackPanel>
+
+                                                <StackPanel
+                                                    Grid.Column="2"
+                                                    MinWidth="106"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="5">
+                                                    <Border
+                                                        Padding="7,2"
+                                                        HorizontalAlignment="Right"
+                                                        Background="{Binding StatusBackgroundBrush}"
+                                                        CornerRadius="9">
+                                                        <TextBlock
+                                                            FontSize="10"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{Binding StatusBrush}"
+                                                            Text="{Binding StatusLabel}" />
+                                                    </Border>
+                                                    <Button
+                                                        MinWidth="76"
+                                                        Padding="9,3"
+                                                        HorizontalAlignment="Right"
+                                                        Tag="{Binding ModelName}"
+                                                        Click="ModelManagerActionButton_Click"
+                                                        Content="Scarica"
+                                                        Visibility="{Binding DownloadActionVisibility}" />
+                                                    <Button
+                                                        Tag="{Binding ModelName}"
+                                                        AutomationProperties.Name="{Binding UninstallAutomationName}"
+                                                        Click="ModelManagerActionButton_Click"
+                                                        Content="Disinstalla"
+                                                        Style="{StaticResource DangerButtonStyle}"
+                                                        Visibility="{Binding UninstallActionVisibility}">
+                                                        <Button.Resources>
+                                                            <SolidColorBrush
+                                                                x:Key="ButtonBackgroundPointerOver"
+                                                                Color="#D83B2D" />
+                                                            <SolidColorBrush
+                                                                x:Key="ButtonBackgroundPressed"
+                                                                Color="#A4261A" />
+                                                        </Button.Resources>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <Grid Grid.Row="4" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock
+                                        x:Name="ModelManagerActivityText"
+                                        FontSize="11"
+                                        Foreground="{StaticResource MutedTextBrush}"
+                                        Text="Stima indicativa: non è un benchmark." />
+                                    <ProgressBar
+                                        x:Name="ModelManagerActivityProgressBar"
+                                        Height="3"
+                                        Margin="0,3,0,0"
+                                        IsIndeterminate="True"
+                                        Visibility="Collapsed" />
+                                </StackPanel>
+                                <Button
+                                    x:Name="RefreshModelManagerButton"
+                                    Grid.Column="1"
+                                    MinWidth="92"
+                                    Click="RefreshModelManagerButton_Click"
+                                    Content="Aggiorna" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <TeachingTip
+                    x:Name="SettingInfoTip"
+                    IsLightDismissEnabled="False"
+                    PreferredPlacement="Left">
+                    <StackPanel
+                        MaxWidth="260"
+                        Spacing="6">
+                        <TextBlock
+                            x:Name="SettingInfoTipTitleText"
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            TextWrapping="WrapWholeWords" />
+                        <TextBlock
+                            x:Name="SettingInfoTipText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </TeachingTip>
             </Grid>
-        </Border>
-    </Grid>
+        </Grid>
+    </Border>
 </Page>

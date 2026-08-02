@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt ruff
+
+      - name: Test and lint Python
+        run: |
+          python -m unittest discover -s tests -v
+          python -m py_compile Whisper.py run.py
+          ruff check Whisper.py run.py tests
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore WinUI
+        run: dotnet restore FasterWhisperGui\FasterWhisperGui.csproj -p:Platform=x64 --locked-mode
+
+      - name: Build WinUI
+        run: dotnet build FasterWhisperGui\FasterWhisperGui.csproj -p:Platform=x64 --no-restore
+
+      - name: Build updater
+        run: dotnet build WhisperLS.Updater\WhisperLS.Updater.csproj -c Release

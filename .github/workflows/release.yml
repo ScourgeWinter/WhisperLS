@@ -1,0 +1,75 @@
+name: Release win-x64
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versione semantica senza prefisso v"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Installa Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Determina versione
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          }
+          "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt ruff
+          python -m unittest discover -s tests -v
+          python -m py_compile Whisper.py run.py tools/build_release.py
+          ruff check Whisper.py run.py tests tools/build_release.py
+          dotnet build FasterWhisperGui\FasterWhisperGui.csproj -p:Platform=x64
+          dotnet build WhisperLS.Updater\WhisperLS.Updater.csproj -c Release
+
+      - name: Costruisci asset Full, Light e Portable
+        run: python tools/build_release.py --version "${{ steps.version.outputs.value }}"
+
+      - name: Pubblica release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: WhisperLS ${{ steps.version.outputs.value }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/WhisperLS-Setup-${{ steps.version.outputs.value }}-Full-x64.exe
+            artifacts/WhisperLS-Setup-${{ steps.version.outputs.value }}-Light-x64.exe
+            artifacts/WhisperLS-Portable-${{ steps.version.outputs.value }}-Full-x64.zip
+            artifacts/WhisperLS-Update-${{ steps.version.outputs.value }}-Full-x64.zip
+            artifacts/WhisperLS-Update-${{ steps.version.outputs.value }}-Light-x64.zip
+            artifacts/update-manifest-full.json
+            artifacts/update-manifest-light.json
+            artifacts/SHA256SUMS.txt

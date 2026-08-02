@@ -1,186 +1,94 @@
 using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using System.Diagnostics;
 using System.IO;
-using Windows.Graphics;
-using Windows.UI;
-using WinRT.Interop;
 using System.Runtime.InteropServices;
+using Windows.Graphics;
+using WinRT.Interop;
 
 namespace FasterWhisperGui
 {
     public partial class App : Application
     {
-        public static Window? MainWindow { get; private set; }
-        public static Frame?  RootFrame  { get; private set; }
-        private Window? window;
+        private const double InitialLogicalWidth = 700;
+        private const double InitialLogicalHeight = 560;
 
-        private const double SplashLogicalSize = 340;
-        private const double FullLogicalWidth  = 820;
-        private const double FullLogicalHeight = 640;
-        private const int    GWL_STYLE         = -16;
-        private const int    GWL_EXSTYLE       = -20;
-        private const long   WS_EX_LAYERED     = 0x00080000L;
-        private const uint   LWA_ALPHA         = 0x00000002;
-        private static readonly Color ChromeTopColor = Color.FromArgb(255, 84, 214, 255);
-        private static readonly Color ChromeTextColor = Color.FromArgb(255, 237, 234, 232);
+        public static Window? MainWindow { get; private set; }
+        public static Frame? RootFrame { get; private set; }
 
         public App()
         {
-            this.InitializeComponent();
+            InitializeComponent();
+            UnhandledException += OnUnhandledException;
         }
 
-        protected override void OnLaunched(LaunchActivatedEventArgs e)
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
-            window ??= new Window();
+            var window = new Window
+            {
+                Title = "WhisperLS"
+            };
             MainWindow = window;
-            window.Title = "WhisperLS";
-            window.ExtendsContentIntoTitleBar = true;
             SetWindowIcon(window);
+            ConfigureCustomChrome(window);
 
-            if (window.Content is not Frame rootFrame)
-            {
-                rootFrame = new Frame();
-                rootFrame.Background = new SolidColorBrush(ChromeTopColor);
-                rootFrame.Opacity = 1;
-                rootFrame.NavigationFailed += OnNavigationFailed;
-                window.Content = rootFrame;
-            }
-            else
-            {
-                rootFrame.Background = new SolidColorBrush(ChromeTopColor);
-                rootFrame.Opacity = 1;
-            }
-
+            var rootFrame = new Frame();
+            rootFrame.NavigationFailed += OnNavigationFailed;
             RootFrame = rootFrame;
+            window.Content = rootFrame;
+            rootFrame.Navigate(typeof(MainPage), args.Arguments);
 
-            _ = rootFrame.Navigate(typeof(SplashPage), e.Arguments);
-
-            var hwnd = WindowNative.GetWindowHandle(window);
-            HideWindowUntilSplashIsReady(hwnd);
-            SuppressNativeChrome();
-
-            var displayArea = DisplayArea.GetFromWindowId(window.AppWindow.Id, DisplayAreaFallback.Primary);
-            var dpiScale    = GetDpiForWindow(hwnd) / 96.0;
-
-            // Start with a small square window for the splash screen
-            var splashPhys = (int)Math.Round(SplashLogicalSize * dpiScale);
-            window.AppWindow.Resize(new SizeInt32(splashPhys, splashPhys));
-            window.AppWindow.Move(new PointInt32(
-                Math.Max(0, displayArea.WorkArea.X + ((displayArea.WorkArea.Width  - splashPhys) / 2)),
-                Math.Max(0, displayArea.WorkArea.Y + ((displayArea.WorkArea.Height - splashPhys) / 2))));
-
+            window.AppWindow.Closing += OnAppWindowClosing;
+            ConfigureInitialWindowBounds(window);
             window.Activate();
         }
 
-        public static async Task RevealStartupWindowAsync()
+        private static void ConfigureCustomChrome(Window window)
         {
-            if (MainWindow is null) return;
-
-            var hwnd = WindowNative.GetWindowHandle(MainWindow);
-            await WaitForRenderedFramesAsync(2);
-            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-        }
-
-        public static async Task ExpandToFullSizeAsync()
-        {
-            if (MainWindow is null) return;
-            var hwnd = WindowNative.GetWindowHandle(MainWindow);
-            var dpiScale = GetDpiForWindow(hwnd) / 96.0;
-            var displayArea = DisplayArea.GetFromWindowId(MainWindow.AppWindow.Id, DisplayAreaFallback.Primary);
-
-            var endW = Math.Min(Math.Max(320, displayArea.WorkArea.Width  - 24),
-                                (int)Math.Round(FullLogicalWidth  * dpiScale));
-            var endH = Math.Min(Math.Max(320, displayArea.WorkArea.Height - 24),
-                                (int)Math.Round(FullLogicalHeight * dpiScale));
-            var x    = Math.Max(0, displayArea.WorkArea.X + ((displayArea.WorkArea.Width  - endW) / 2));
-            var y    = Math.Max(0, displayArea.WorkArea.Y + ((displayArea.WorkArea.Height - endH) / 2));
-
-            ClearLayeredWindow(hwnd);
-
-            var appWindow = MainWindow.AppWindow;
-            var startPosition = appWindow.Position;
-            var startSize = appWindow.Size;
-            var target = new RectInt32(x, y, endW, endH);
-            var tcs = new TaskCompletionSource();
-            var sw = Stopwatch.StartNew();
-            const double durationMs = 420;
-
-            void OnRendering(object? sender, object e)
+            window.ExtendsContentIntoTitleBar = true;
+            if (window.AppWindow.Presenter is OverlappedPresenter presenter)
             {
-                var t = Math.Min(1.0, sw.Elapsed.TotalMilliseconds / durationMs);
-                var eased = 1 - Math.Pow(1 - t, 3);
-                var bounds = new RectInt32(
-                    Lerp(startPosition.X, target.X, eased),
-                    Lerp(startPosition.Y, target.Y, eased),
-                    Math.Max(1, Lerp(startSize.Width, target.Width, eased)),
-                    Math.Max(1, Lerp(startSize.Height, target.Height, eased)));
-
-                appWindow.MoveAndResize(bounds);
-
-                if (t >= 1.0)
-                {
-                    CompositionTarget.Rendering -= OnRendering;
-                    appWindow.MoveAndResize(target);
-                    tcs.TrySetResult();
-                }
+                presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
+                presenter.IsResizable = true;
+                presenter.IsMaximizable = true;
+                presenter.IsMinimizable = true;
             }
-
-            CompositionTarget.Rendering += OnRendering;
-            await tcs.Task;
-            SuppressNativeChrome();
         }
 
-        private static Task WaitForRenderedFramesAsync(int frameCount)
+        private static void ConfigureInitialWindowBounds(Window window)
         {
-            var tcs = new TaskCompletionSource();
-            var remaining = Math.Max(1, frameCount);
+            var hwnd = WindowNative.GetWindowHandle(window);
+            var scale = Math.Max(1.0, GetDpiForWindow(hwnd) / 96.0);
+            var displayArea = DisplayArea.GetFromWindowId(
+                window.AppWindow.Id,
+                DisplayAreaFallback.Nearest);
+            var workArea = displayArea.WorkArea;
+            var width = Math.Min(workArea.Width - 48, (int)Math.Round(InitialLogicalWidth * scale));
+            var height = Math.Min(workArea.Height - 48, (int)Math.Round(InitialLogicalHeight * scale));
+            width = Math.Max(620, width);
+            height = Math.Max(520, height);
+            var x = workArea.X + Math.Max(24, (workArea.Width - width) / 2);
+            var y = workArea.Y + Math.Max(24, (workArea.Height - height) / 2);
+            window.AppWindow.MoveAndResize(new RectInt32(x, y, width, height));
 
-            void OnRendering(object? sender, object e)
+            if (window.AppWindow.Presenter is OverlappedPresenter presenter)
             {
-                remaining--;
-                if (remaining > 0)
+                presenter.IsResizable = true;
+                presenter.IsMaximizable = true;
+                presenter.IsMinimizable = true;
+            }
+        }
+
+        private static void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+        {
+            if (RootFrame?.Content is MainPage mainPage)
+            {
+                if (mainPage.RequestAnimatedClose())
                 {
+                    args.Cancel = true;
                     return;
                 }
-
-                CompositionTarget.Rendering -= OnRendering;
-                tcs.TrySetResult();
+                mainPage.CancelActiveOperation();
             }
-
-            CompositionTarget.Rendering += OnRendering;
-            return tcs.Task;
-        }
-
-        private static int Lerp(int start, int end, double amount) =>
-            (int)Math.Round(start + ((end - start) * amount));
-
-        public static void SuppressNativeChrome()
-        {
-            if (MainWindow is null)
-            {
-                return;
-            }
-
-            if (MainWindow.AppWindow.Presenter is OverlappedPresenter presenter)
-            {
-                presenter.IsMaximizable = false;
-                presenter.IsMinimizable = true;
-                presenter.IsResizable = false;
-                presenter.SetBorderAndTitleBar(true, false);
-            }
-
-            var hwnd = WindowNative.GetWindowHandle(MainWindow);
-            InstallWindowChromeSubclass(hwnd);
-            RemoveNativeResizeBorder(hwnd);
-            ApplyNativeWindowColors(hwnd);
-            ApplyAppWindowTitleBarColors(MainWindow);
-        }
-
-        private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
-        {
-            throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
         }
 
         private static void SetWindowIcon(Window window)
@@ -189,181 +97,30 @@ namespace FasterWhisperGui
             if (File.Exists(iconPath))
             {
                 window.AppWindow.SetIcon(iconPath);
-                return;
             }
+        }
 
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "favicon.ico");
-            if (File.Exists(iconPath))
+        private static void OnNavigationFailed(object sender, NavigationFailedEventArgs args)
+        {
+            System.Diagnostics.Debug.WriteLine(args.Exception);
+            if (sender is Frame frame)
             {
-                window.AppWindow.SetIcon(iconPath);
+                frame.Content = new TextBlock
+                {
+                    Margin = new Thickness(24),
+                    Text = "Impossibile caricare l'interfaccia. " +
+                           (args.Exception?.Message ?? "Errore di navigazione sconosciuto."),
+                    TextWrapping = TextWrapping.Wrap
+                };
             }
+        }
+
+        private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs args)
+        {
+            System.Diagnostics.Debug.WriteLine(args.Exception);
         }
 
         [DllImport("user32.dll")]
-        private static extern uint GetDpiForWindow(nint hWnd);
-
-        private static void ApplyNativeWindowColors(nint hwnd)
-        {
-            const int DWMWA_USE_IMMERSIVE_DARK_MODE  = 20;
-            const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-            const int DWMWA_BORDER_COLOR             = 34;
-            const int DWMWA_CAPTION_COLOR            = 35;
-            const int DWMWA_TEXT_COLOR               = 36;
-            // DWMWCP_ROUND = 2: force rounded corners even without WS_CAPTION
-            const int DWMWCP_ROUND                   = 2;
-            const int DWMWA_VISIBLE_FRAME_BORDER_THICKNESS = 37;
-
-            var darkMode         = 1;
-            var roundCorners     = DWMWCP_ROUND;
-            var frameBorderColor = unchecked((int)0xFFFFFFFE);
-            var windowBackground = 0x00FFD654;
-            var textColor        = 0x00EDEAE8;
-            var zeroFrameBorder  = 0;
-
-            _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,  ref darkMode,         sizeof(int));
-            _ = DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref roundCorners,     sizeof(int));
-            _ = DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR,             ref frameBorderColor, sizeof(int));
-            _ = DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR,            ref windowBackground, sizeof(int));
-            _ = DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR,               ref textColor,        sizeof(int));
-            _ = DwmSetWindowAttribute(hwnd, DWMWA_VISIBLE_FRAME_BORDER_THICKNESS, ref zeroFrameBorder, sizeof(int));
-        }
-
-        [DllImport("dwmapi.dll")]
-        private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int pvAttribute, int cbAttribute);
-
-        private static void ApplyAppWindowTitleBarColors(Window window)
-        {
-            if (!AppWindowTitleBar.IsCustomizationSupported())
-            {
-                return;
-            }
-
-            window.ExtendsContentIntoTitleBar = true;
-
-            var transparent = Color.FromArgb(0, 0, 0, 0);
-            var buttonHover = Color.FromArgb(32, 255, 255, 255);
-            var buttonPressed = Color.FromArgb(48, 255, 255, 255);
-            var titleBar = window.AppWindow.TitleBar;
-
-            titleBar.ExtendsContentIntoTitleBar = true;
-            titleBar.BackgroundColor = ChromeTopColor;
-            titleBar.InactiveBackgroundColor = ChromeTopColor;
-            titleBar.ForegroundColor = ChromeTextColor;
-            titleBar.InactiveForegroundColor = ChromeTextColor;
-            titleBar.ButtonForegroundColor = ChromeTextColor;
-            titleBar.ButtonInactiveForegroundColor = ChromeTextColor;
-            titleBar.ButtonBackgroundColor = transparent;
-            titleBar.ButtonInactiveBackgroundColor = transparent;
-            titleBar.ButtonHoverForegroundColor = ChromeTextColor;
-            titleBar.ButtonHoverBackgroundColor = buttonHover;
-            titleBar.ButtonPressedForegroundColor = ChromeTextColor;
-            titleBar.ButtonPressedBackgroundColor = buttonPressed;
-        }
-
-        private static void InstallWindowChromeSubclass(nint hwnd)
-        {
-            if (chromeSubclassInstalled)
-            {
-                return;
-            }
-
-            chromeSubclassInstalled = SetWindowSubclass(hwnd, WindowChromeSubclass, WindowChromeSubclassId, nuint.Zero);
-        }
-
-        private static nint HandleWindowChromeMessage(
-            nint hwnd,
-            uint message,
-            nint wParam,
-            nint lParam,
-            nuint subclassId,
-            nuint refData)
-        {
-            const uint WM_NCCALCSIZE = 0x0083;
-            const uint WM_NCDESTROY = 0x0082;
-
-            if (message == WM_NCCALCSIZE && wParam != nint.Zero)
-            {
-                return nint.Zero;
-            }
-
-            if (message == WM_NCDESTROY)
-            {
-                _ = RemoveWindowSubclass(hwnd, WindowChromeSubclass, subclassId);
-                chromeSubclassInstalled = false;
-            }
-
-            return DefSubclassProc(hwnd, message, wParam, lParam);
-        }
-
-        private static void RemoveNativeResizeBorder(nint hwnd)
-        {
-            const long WS_CAPTION    = 0x00C00000L;
-            const long WS_BORDER     = 0x00800000L;
-            const long WS_THICKFRAME = 0x00040000L;
-            const long WS_SYSMENU    = 0x00080000L;
-            const long WS_MINIMIZEBOX = 0x00020000L;
-            const uint SWP_NOSIZE    = 0x0001;
-            const uint SWP_NOMOVE    = 0x0002;
-            const uint SWP_NOZORDER  = 0x0004;
-            const uint SWP_FRAMECHANGED = 0x0020;
-
-            var style = GetWindowLongPtr(hwnd, GWL_STYLE).ToInt64();
-            style &= ~WS_CAPTION;
-            style &= ~WS_BORDER;
-            style &= ~WS_THICKFRAME;
-            style |= WS_SYSMENU;
-            style |= WS_MINIMIZEBOX;
-
-            _ = SetWindowLongPtr(hwnd, GWL_STYLE, new nint(style));
-            _ = SetWindowPos(hwnd, nint.Zero, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-        }
-
-        private static void HideWindowUntilSplashIsReady(nint hwnd)
-        {
-            var exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
-            _ = SetWindowLongPtr(hwnd, GWL_EXSTYLE, new nint(exStyle | WS_EX_LAYERED));
-            SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA);
-        }
-
-        private static void ClearLayeredWindow(nint hwnd)
-        {
-            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-            var exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
-            _ = SetWindowLongPtr(hwnd, GWL_EXSTYLE, new nint(exStyle & ~WS_EX_LAYERED));
-        }
-
-        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
-        private static extern nint GetWindowLongPtr(nint hWnd, int nIndex);
-
-        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
-        private static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetLayeredWindowAttributes(nint hwnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        private delegate nint SubclassProc(
-            nint hwnd,
-            uint message,
-            nint wParam,
-            nint lParam,
-            nuint subclassId,
-            nuint refData);
-
-        private const nuint WindowChromeSubclassId = 1;
-        private static readonly SubclassProc WindowChromeSubclass = HandleWindowChromeMessage;
-        private static bool chromeSubclassInstalled;
-
-        [DllImport("comctl32.dll", SetLastError = true)]
-        private static extern bool SetWindowSubclass(nint hwnd, SubclassProc subclassProc, nuint subclassId, nuint refData);
-
-        [DllImport("comctl32.dll", SetLastError = true)]
-        private static extern bool RemoveWindowSubclass(nint hwnd, SubclassProc subclassProc, nuint subclassId);
-
-        [DllImport("comctl32.dll")]
-        private static extern nint DefSubclassProc(nint hwnd, uint message, nint wParam, nint lParam);
+        private static extern uint GetDpiForWindow(nint hwnd);
     }
 }
