@@ -22,15 +22,22 @@ class WhisperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             first = root / "prima.mp3"
+            first_continuation = root / "prima-parte-2.mp3"
             second = root / "seconda.mp3"
             first.touch()
+            first_continuation.touch()
             second.touch()
             manifest = root / "queue.json"
             manifest.write_text(
                 json.dumps(
                     {
                         "jobs": [
-                            {"id": "a", "sources": [str(first)], "model": "medium", "outputName": "Prima"},
+                            {
+                                "id": "a",
+                                "sources": [str(first), str(first_continuation)],
+                                "model": "medium",
+                                "outputName": "Prima",
+                            },
                             {"id": "b", "sources": [str(second)], "model": "medium", "outputName": "Seconda"},
                         ]
                     }
@@ -44,6 +51,8 @@ class WhisperTests(unittest.TestCase):
                 Whisper.run_batch_manifest(manifest)
             self.assertEqual(len(captured), 2)
             self.assertIn("Prima", captured[0])
+            self.assertIn("--input-file", captured[0])
+            self.assertIn(str(first_continuation), captured[0])
             self.assertIn("Seconda", captured[1])
             self.assertNotIn("WHISPERLS_BATCH_WORKER", os.environ)
 

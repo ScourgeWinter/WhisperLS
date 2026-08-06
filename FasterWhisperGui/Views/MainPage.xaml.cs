@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Windowing;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -51,6 +52,7 @@ namespace FasterWhisperGui.Views
         private readonly object processSync = new();
         private readonly Queue<int> logEntryLengths = new();
         private readonly List<ModelOption> modelOptions = new();
+        private readonly List<TranscriptionQueueJob> transcriptionQueue = new();
         private readonly DispatcherTimer settingsInfoTimer = new();
         private readonly UpdateService updateService = new();
         private CancellationTokenSource? analysisCts;
@@ -73,6 +75,7 @@ namespace FasterWhisperGui.Views
         private Storyboard? consoleStoryboard;
         private Storyboard? settingsDrawerStoryboard;
         private Storyboard? modelManagerStoryboard;
+        private Storyboard? queueManagerStoryboard;
         private Storyboard? windowTransitionStoryboard;
         private CancellationTokenSource? modelManagerCts;
         private CancellationTokenSource? modelStatusCts;
@@ -82,6 +85,21 @@ namespace FasterWhisperGui.Views
         private bool consoleShouldFollowTail = true;
         private string consoleProgressUnitLabel = "Parte";
         private string? currentBatchJobId;
+        private bool queueManagerOpen;
+        private List<TranscriptionQueueJob>? queueManagerWorkingQueue;
+        private ObservableCollection<QueueManagerItem>? queueManagerItems;
+        private string? queuePointerDragJobKey;
+        private FrameworkElement? queuePointerDragHandle;
+        private ListViewItem? queuePointerDragContainer;
+        private FrameworkElement? queuePointerDragVisual;
+        private CompositeTransform? queuePointerDragTransform;
+        private readonly Dictionary<ListViewItem, (FrameworkElement Visual, CompositeTransform Transform)>
+            queuePointerSiblingTransforms = new();
+        private double queuePointerDragOffsetY;
+        private double queuePointerLastY;
+        private int queuePointerDragOriginIndex = -1;
+        private int queuePointerDragTargetIndex = -1;
+        private uint queuePointerId;
 
         public MainPage()
         {
@@ -119,7 +137,6 @@ namespace FasterWhisperGui.Views
             UpdateModelSelectorBorderState();
             LanguageComboBox.SelectedIndex = 0;
             DeviceComboBox.SelectedIndex = 0;
-            MultiFileModeComboBox.SelectedIndex = 0;
             initialized = true;
             if (File.Exists(PendingQueuePath))
             {
@@ -957,6 +974,73 @@ namespace FasterWhisperGui.Views
             storyboard.Begin();
         }
 
+        private void AnimateQueueManager(bool open)
+        {
+            if (queueManagerOpen == open && queueManagerStoryboard is null)
+            {
+                return;
+            }
+
+            queueManagerStoryboard?.Stop();
+            queueManagerOpen = open;
+            if (open)
+            {
+                QueueManagerOverlay.Visibility = Visibility.Visible;
+            }
+
+            var duration = new Duration(TimeSpan.FromMilliseconds(open ? 180 : 140));
+            var easing = new CubicEase
+            {
+                EasingMode = open ? EasingMode.EaseOut : EasingMode.EaseIn
+            };
+            var storyboard = new Storyboard();
+            var opacityAnimation = new DoubleAnimation
+            {
+                From = QueueManagerOverlay.Opacity,
+                To = open ? 1 : 0,
+                Duration = duration,
+                EasingFunction = easing
+            };
+            Storyboard.SetTarget(opacityAnimation, QueueManagerOverlay);
+            Storyboard.SetTargetProperty(opacityAnimation, "Opacity");
+            storyboard.Children.Add(opacityAnimation);
+
+            foreach (var property in new[] { "ScaleX", "ScaleY" })
+            {
+                var scaleAnimation = new DoubleAnimation
+                {
+                    From = property == "ScaleX"
+                        ? QueueManagerScaleTransform.ScaleX
+                        : QueueManagerScaleTransform.ScaleY,
+                    To = open ? 1 : 0.97,
+                    Duration = duration,
+                    EasingFunction = easing
+                };
+                Storyboard.SetTarget(scaleAnimation, QueueManagerScaleTransform);
+                Storyboard.SetTargetProperty(scaleAnimation, property);
+                storyboard.Children.Add(scaleAnimation);
+            }
+
+            QueueManagerOverlay.Opacity = open ? 1 : 0;
+            QueueManagerScaleTransform.ScaleX = open ? 1 : 0.97;
+            QueueManagerScaleTransform.ScaleY = open ? 1 : 0.97;
+            queueManagerStoryboard = storyboard;
+            storyboard.Completed += (_, _) =>
+            {
+                if (!ReferenceEquals(queueManagerStoryboard, storyboard))
+                {
+                    return;
+                }
+                storyboard.Stop();
+                if (!open)
+                {
+                    QueueManagerOverlay.Visibility = Visibility.Collapsed;
+                }
+                queueManagerStoryboard = null;
+            };
+            storyboard.Begin();
+        }
+
         private void SettingInfoIcon_PointerEntered(
             object sender,
             PointerRoutedEventArgs e)
@@ -1267,6 +1351,10 @@ namespace FasterWhisperGui.Views
                     .ToArray();
                 selectedAudioFiles.Clear();
                 selectedAudioFiles.AddRange(orderedFiles.Select(file => file.Path));
+                transcriptionQueue.Clear();
+                transcriptionQueue.AddRange(
+                    selectedAudioFiles.Select(source =>
+                        new TranscriptionQueueJob(new[] { source })));
                 selectedAudioFile = selectedAudioFiles[0];
                 selectedOutputDirectory = null;
                 lastOutputDirectory = null;
@@ -1276,23 +1364,10 @@ namespace FasterWhisperGui.Views
                 ToolTipService.SetToolTip(
                     FileNameText,
                     string.Join(Environment.NewLine, selectedAudioFiles));
-                SelectedPartsText.Text = orderedFiles.Length > 1
-                    ? "Ordine: " + string.Join("  →  ", orderedFiles.Select(file => file.Name))
-                    : string.Empty;
-                SelectedPartsText.Visibility = orderedFiles.Length > 1
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
-                MultiFileModeComboBox.Visibility = orderedFiles.Length > 1
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
-                QueueOrderControls.Visibility = orderedFiles.Length > 1
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
-                RefreshQueueOrderSelector();
-                MultiFileModeComboBox.SelectedIndex = 0;
-                OutputNameTextBox.Text = orderedFiles.Length > 1
-                    ? "{source}_trascrizione"
-                    : $"{Path.GetFileNameWithoutExtension(selectedAudioFile)}_trascrizione";
+                SelectedPartsText.Text = string.Empty;
+                SelectedPartsText.Visibility = Visibility.Collapsed;
+                MultiFileControls.Visibility = Visibility.Visible;
+                UpdateManageTracksButton();
                 OutputDirectoryText.Text = "Stessa cartella del file sorgente";
                 SettingsSummaryPanel.Visibility = Visibility.Visible;
                 AnalysisPanel.Visibility = Visibility.Visible;
@@ -1349,58 +1424,542 @@ namespace FasterWhisperGui.Views
             }
         }
 
-        private void MultiFileModeComboBox_SelectionChanged(
-            object sender,
-            SelectionChangedEventArgs e)
+        private void UpdateManageTracksButton()
         {
-            if (selectedAudioFiles.Count <= 1)
+            var jobLabel = transcriptionQueue.Count == 1 ? "1 lavoro" : $"{transcriptionQueue.Count} lavori";
+            ManageTracksButtonText.Text = $"Gestisci coda · {selectedAudioFiles.Count} tracce · {jobLabel}";
+        }
+
+        private void ManageTracksButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (selectedAudioFiles.Count == 0)
             {
                 return;
             }
+
+            if (settingsDrawerOpen)
+            {
+                AnimateSettingsDrawer(open: false);
+            }
+            if (modelManagerOpen)
+            {
+                CloseModelManager();
+            }
+
+            queueManagerWorkingQueue = transcriptionQueue.Select(job => job.Clone()).ToList();
+            RefreshQueueManager(0);
+            AnimateQueueManager(open: true);
+        }
+
+        private void RefreshQueueManager(int selectedIndex)
+        {
+            if (queueManagerWorkingQueue is not { Count: > 0 } workingQueue)
+            {
+                return;
+            }
+            QueueManagerListView.ItemsSource = null;
+            queueManagerItems = new ObservableCollection<QueueManagerItem>(workingQueue
+                .Select((job, index) => new QueueManagerItem
+                {
+                    JobKey = job.Key,
+                    Title = $"LAVORO {index + 1}",
+                    KindLabel = job.Sources.Count == 1
+                        ? "SINGOLO"
+                        : $"MULTIPARTE · {job.Sources.Count}",
+                    SourcesLabel = string.Join("  →  ", job.Sources.Select(Path.GetFileName)),
+                    OutputName = job.OutputName ?? string.Empty,
+                    DefaultOutputName = GetAutomaticOutputName(job)
+                })
+                .ToArray());
+            QueueManagerListView.ItemsSource = queueManagerItems;
+            QueueManagerListView.SelectedIndex = Math.Clamp(selectedIndex, 0, workingQueue.Count - 1);
+            QueueManagerValidationText.Visibility = Visibility.Collapsed;
+            var trackCount = workingQueue.Sum(job => job.Sources.Count);
+            QueueManagerSummaryText.Text =
+                $"{trackCount} tracce · {workingQueue.Count} " +
+                (workingQueue.Count == 1 ? "lavoro" : "lavori");
+            UpdateQueueManagerActions();
+        }
+
+        private void UpdateQueueManagerActions()
+        {
+            var workingQueue = queueManagerWorkingQueue;
+            var index = QueueManagerListView.SelectedIndex;
+            var hasSelection = workingQueue is not null && index >= 0 && index < workingQueue.Count;
+            QueueMoveUpButton.IsEnabled = hasSelection && index > 0;
+            QueueMoveDownButton.IsEnabled = hasSelection && index < workingQueue!.Count - 1;
+            QueueMergeButton.IsEnabled = hasSelection && index > 0;
+            QueueSplitButton.IsEnabled = hasSelection && workingQueue![index].Sources.Count > 1;
+            QueueRemoveButton.IsEnabled = hasSelection && workingQueue!.Count > 1;
+        }
+
+        private void QueueManagerListView_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+            UpdateQueueManagerActions();
+
+        private void QueueOutputNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is not TextBox textBox ||
+                textBox.Tag is not string jobKey ||
+                queueManagerWorkingQueue is not { } workingQueue)
+            {
+                return;
+            }
+            var job = workingQueue.FirstOrDefault(candidate => candidate.Key == jobKey);
+            if (job is not null)
+            {
+                job.OutputName = textBox.Text;
+                QueueManagerValidationText.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void QueueDragHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement handle ||
+                handle.Tag is not string jobKey ||
+                queueManagerItems is null ||
+                !e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed)
+            {
+                return;
+            }
+
+            var index = queueManagerItems.ToList().FindIndex(item => item.JobKey == jobKey);
+            if (index < 0 || !handle.CapturePointer(e.Pointer))
+            {
+                return;
+            }
+
+            queuePointerDragJobKey = jobKey;
+            queuePointerDragHandle = handle;
+            queuePointerDragContainer = QueueManagerListView.ContainerFromIndex(index) as ListViewItem;
+            queuePointerDragOriginIndex = index;
+            queuePointerDragTargetIndex = index;
+            queuePointerSiblingTransforms.Clear();
+            queuePointerId = e.Pointer.PointerId;
+            QueueManagerListView.SelectedIndex = index;
+            if (queuePointerDragContainer is { } container)
+            {
+                queuePointerDragOffsetY = e.GetCurrentPoint(container).Position.Y;
+                queuePointerLastY = e.GetCurrentPoint(QueueManagerListView).Position.Y;
+                queuePointerDragVisual = container.ContentTemplateRoot as FrameworkElement ?? container;
+                queuePointerDragTransform = new CompositeTransform();
+                queuePointerDragVisual.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+                queuePointerDragVisual.RenderTransform = queuePointerDragTransform;
+                Canvas.SetZIndex(container, 1000);
+                AnimateQueueDragVisual(queuePointerDragVisual, queuePointerDragTransform, engaged: true);
+            }
+            e.Handled = true;
+        }
+
+        private void QueueDragHandle_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.PointerId != queuePointerId ||
+                queuePointerDragJobKey is null ||
+                queueManagerItems is not { Count: > 0 } items ||
+                queueManagerWorkingQueue is null)
+            {
+                return;
+            }
+
+            var point = e.GetCurrentPoint(QueueManagerListView).Position;
+            queuePointerLastY = Math.Clamp(point.Y, 0, QueueManagerListView.ActualHeight);
+            UpdateQueueDraggedItemPosition(queuePointerLastY);
+
+            var targetIndex = GetQueueDropIndex(queuePointerLastY, items.Count);
+            if (targetIndex >= 0 && targetIndex != queuePointerDragTargetIndex)
+            {
+                queuePointerDragTargetIndex = targetIndex;
+                AnimateQueueDropGap(queuePointerDragOriginIndex, targetIndex, items.Count);
+            }
+            e.Handled = true;
+        }
+
+        private void AnimateQueueDropGap(int originIndex, int targetIndex, int itemCount)
+        {
+            if (queuePointerDragContainer is not { } draggedContainer)
+            {
+                return;
+            }
+
+            var step = draggedContainer.ActualHeight +
+                draggedContainer.Margin.Top + draggedContainer.Margin.Bottom;
+            for (var index = 0; index < itemCount; index++)
+            {
+                if (index == originIndex ||
+                    QueueManagerListView.ContainerFromIndex(index) is not ListViewItem container)
+                {
+                    continue;
+                }
+
+                var targetOffset = 0d;
+                if (targetIndex > originIndex && index > originIndex && index <= targetIndex)
+                {
+                    targetOffset = -step;
+                }
+                else if (targetIndex < originIndex && index >= targetIndex && index < originIndex)
+                {
+                    targetOffset = step;
+                }
+
+                if (targetOffset == 0 && !queuePointerSiblingTransforms.ContainsKey(container))
+                {
+                    continue;
+                }
+
+                if (!queuePointerSiblingTransforms.TryGetValue(container, out var state))
+                {
+                    var visual = container.ContentTemplateRoot as FrameworkElement ?? container;
+                    var transform = new CompositeTransform();
+                    visual.RenderTransform = transform;
+                    state = (visual, transform);
+                    queuePointerSiblingTransforms[container] = state;
+                }
+                AnimateQueueTranslate(state.Transform, targetOffset, 115);
+            }
+        }
+
+        private void UpdateQueueDraggedItemPosition(double pointerY)
+        {
+            if (queuePointerDragContainer is not { } container ||
+                queuePointerDragTransform is not { } transform)
+            {
+                return;
+            }
+
+            var bounds = container.TransformToVisual(QueueManagerListView).TransformBounds(
+                new Windows.Foundation.Rect(0, 0, container.ActualWidth, container.ActualHeight));
+            var layoutTop = bounds.Y;
+            var maxTop = Math.Max(0, QueueManagerListView.ActualHeight - container.ActualHeight);
+            var desiredTop = Math.Clamp(pointerY - queuePointerDragOffsetY, 0, maxTop);
+            transform.TranslateY = desiredTop - layoutTop;
+        }
+
+        private int GetQueueDropIndex(double pointerY, int itemCount)
+        {
+            var fallback = itemCount - 1;
+            for (var index = 0; index < itemCount; index++)
+            {
+                if (QueueManagerListView.ContainerFromIndex(index) is not ListViewItem container)
+                {
+                    continue;
+                }
+                var bounds = container.TransformToVisual(QueueManagerListView).TransformBounds(
+                    new Windows.Foundation.Rect(0, 0, container.ActualWidth, container.ActualHeight));
+                if (pointerY < bounds.Y + (bounds.Height / 2))
+                {
+                    return index;
+                }
+            }
+            return fallback;
+        }
+
+        private void QueueDragHandle_PointerReleased(object sender, PointerRoutedEventArgs e) =>
+            CompleteQueuePointerDrag(e.Pointer.PointerId, cancelled: false);
+
+        private void QueueDragHandle_PointerCanceled(object sender, PointerRoutedEventArgs e) =>
+            CompleteQueuePointerDrag(e.Pointer.PointerId, cancelled: true);
+
+        private void QueueDragHandle_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            if (queuePointerDragJobKey is not null)
+            {
+                CompleteQueuePointerDrag(e.Pointer.PointerId, cancelled: false, releaseCapture: false);
+            }
+        }
+
+        private void CompleteQueuePointerDrag(
+            uint pointerId,
+            bool cancelled,
+            bool releaseCapture = true)
+        {
+            if (pointerId != queuePointerId || queuePointerDragJobKey is null)
+            {
+                return;
+            }
+
+            var handle = queuePointerDragHandle;
+            var container = queuePointerDragContainer;
+            var visual = queuePointerDragVisual;
+            var transform = queuePointerDragTransform;
+            var originIndex = queuePointerDragOriginIndex;
+            var targetIndex = cancelled ? originIndex : queuePointerDragTargetIndex;
+            var workingQueue = queueManagerWorkingQueue;
+            var settleOffset = targetIndex >= 0
+                ? GetQueueSlotOffset(originIndex, targetIndex)
+                : 0;
+            queuePointerDragJobKey = null;
+            queuePointerDragHandle = null;
+            queuePointerDragContainer = null;
+            queuePointerDragVisual = null;
+            queuePointerDragTransform = null;
+            queuePointerDragOriginIndex = -1;
+            queuePointerDragTargetIndex = -1;
+            queuePointerId = 0;
+            if (releaseCapture)
+            {
+                handle?.ReleasePointerCaptures();
+            }
+            if (container is not null && visual is not null && transform is not null)
+            {
+                if (cancelled)
+                {
+                    foreach (var siblingState in queuePointerSiblingTransforms.Values)
+                    {
+                        AnimateQueueTranslate(siblingState.Transform, 0, 150);
+                    }
+                }
+                var settleAnimation = AnimateQueueDragVisual(
+                    visual,
+                    transform,
+                    engaged: false,
+                    settleTranslateY: settleOffset,
+                    begin: false);
+                settleAnimation.Completed += (_, _) =>
+                {
+                    visual.Opacity = 1;
+                    visual.RenderTransform = null;
+                    Canvas.SetZIndex(container, 0);
+                    foreach (var siblingState in queuePointerSiblingTransforms.Values)
+                    {
+                        siblingState.Visual.RenderTransform = null;
+                    }
+                    queuePointerSiblingTransforms.Clear();
+
+                    if (!cancelled &&
+                        workingQueue is not null &&
+                        originIndex >= 0 &&
+                        targetIndex >= 0 &&
+                        originIndex < workingQueue.Count &&
+                        targetIndex < workingQueue.Count &&
+                        originIndex != targetIndex)
+                    {
+                        var job = workingQueue[originIndex];
+                        workingQueue.RemoveAt(originIndex);
+                        workingQueue.Insert(targetIndex, job);
+                    }
+                    if (workingQueue is { Count: > 0 })
+                    {
+                        RefreshQueueManager(Math.Clamp(targetIndex, 0, workingQueue.Count - 1));
+                    }
+                };
+                settleAnimation.Begin();
+            }
+            UpdateQueueManagerActions();
+        }
+
+        private double GetQueueSlotOffset(int originIndex, int targetIndex)
+        {
+            if (originIndex < 0 || targetIndex < 0 || originIndex == targetIndex ||
+                QueueManagerListView.ContainerFromIndex(originIndex) is not ListViewItem origin ||
+                QueueManagerListView.ContainerFromIndex(targetIndex) is not ListViewItem target)
+            {
+                return 0;
+            }
+            var originTop = origin.TransformToVisual(QueueManagerListView).TransformPoint(
+                new Windows.Foundation.Point()).Y;
+            var targetTop = target.TransformToVisual(QueueManagerListView).TransformPoint(
+                new Windows.Foundation.Point()).Y;
+            return targetTop - originTop;
+        }
+
+        private static void AnimateQueueTranslate(
+            CompositeTransform transform,
+            double target,
+            int durationMilliseconds)
+        {
+            var storyboard = new Storyboard();
+            AddAnimation(
+                transform,
+                "TranslateY",
+                target,
+                TimeSpan.FromMilliseconds(durationMilliseconds),
+                new QuadraticEase { EasingMode = EasingMode.EaseOut },
+                storyboard);
+            storyboard.Begin();
+        }
+
+        private static Storyboard AnimateQueueDragVisual(
+            FrameworkElement visual,
+            CompositeTransform transform,
+            bool engaged,
+            double settleTranslateY = 0,
+            bool begin = true)
+        {
+            var duration = TimeSpan.FromMilliseconds(engaged ? 110 : 170);
+            var easing = new QuadraticEase
+            {
+                EasingMode = engaged ? EasingMode.EaseOut : EasingMode.EaseInOut
+            };
+            var storyboard = new Storyboard();
+            AddAnimation(visual, "Opacity", engaged ? 0.9 : 1, duration, easing, storyboard);
+            AddAnimation(transform, "ScaleX", engaged ? 1.018 : 1, duration, easing, storyboard);
+            AddAnimation(transform, "ScaleY", engaged ? 1.018 : 1, duration, easing, storyboard);
+            if (!engaged)
+            {
+                AddAnimation(transform, "TranslateY", settleTranslateY, duration, easing, storyboard);
+            }
+            if (begin)
+            {
+                storyboard.Begin();
+            }
+            return storyboard;
+        }
+
+        private static void AddAnimation(
+            DependencyObject target,
+            string property,
+            double value,
+            TimeSpan duration,
+            EasingFunctionBase easing,
+            Storyboard storyboard)
+        {
+            var animation = new DoubleAnimation
+            {
+                To = value,
+                Duration = duration,
+                EasingFunction = easing
+            };
+            Storyboard.SetTarget(animation, target);
+            Storyboard.SetTargetProperty(animation, property);
+            storyboard.Children.Add(animation);
+        }
+
+        private void MoveQueueManagerJob(int offset)
+        {
+            if (queueManagerWorkingQueue is not { } workingQueue)
+            {
+                return;
+            }
+            var index = QueueManagerListView.SelectedIndex;
+            var target = index + offset;
+            if (index < 0 || target < 0 || target >= workingQueue.Count)
+            {
+                return;
+            }
+            (workingQueue[index], workingQueue[target]) =
+                (workingQueue[target], workingQueue[index]);
+            RefreshQueueManager(target);
+        }
+
+        private void QueueMoveUpButton_Click(object sender, RoutedEventArgs e) => MoveQueueManagerJob(-1);
+
+        private void QueueMoveDownButton_Click(object sender, RoutedEventArgs e) => MoveQueueManagerJob(1);
+
+        private void QueueMergeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (queueManagerWorkingQueue is not { } workingQueue)
+            {
+                return;
+            }
+            var index = QueueManagerListView.SelectedIndex;
+            if (index <= 0)
+            {
+                return;
+            }
+            workingQueue[index - 1].Sources.AddRange(workingQueue[index].Sources);
+            workingQueue.RemoveAt(index);
+            RefreshQueueManager(index - 1);
+        }
+
+        private void QueueSplitButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (queueManagerWorkingQueue is not { } workingQueue)
+            {
+                return;
+            }
+            var index = QueueManagerListView.SelectedIndex;
+            if (index < 0 || workingQueue[index].Sources.Count <= 1)
+            {
+                return;
+            }
+            var singles = workingQueue[index].Sources
+                .Select(source => new TranscriptionQueueJob(new[] { source }))
+                .ToArray();
+            workingQueue.RemoveAt(index);
+            workingQueue.InsertRange(index, singles);
+            RefreshQueueManager(index);
+        }
+
+        private void QueueRemoveButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (queueManagerWorkingQueue is not { Count: > 1 } workingQueue)
+            {
+                return;
+            }
+            var index = QueueManagerListView.SelectedIndex;
+            if (index < 0)
+            {
+                return;
+            }
+            workingQueue.RemoveAt(index);
+            RefreshQueueManager(Math.Min(index, workingQueue.Count - 1));
+        }
+
+        private void CloseQueueManagerButton_Click(object sender, RoutedEventArgs e) =>
+            CloseQueueManager();
+
+        private void QueueManagerOverlay_Tapped(object sender, TappedRoutedEventArgs e) =>
+            CloseQueueManager();
+
+        private void QueueManagerPanel_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            e.Handled = true;
+        }
+
+        private void CloseQueueManager()
+        {
+            queueManagerWorkingQueue = null;
+            AnimateQueueManager(open: false);
+        }
+
+        private async void ApplyQueueManagerButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (queueManagerWorkingQueue is not { Count: > 0 } workingQueue)
+            {
+                return;
+            }
+
+            try
+            {
+                foreach (var job in workingQueue)
+                {
+                    _ = GetOutputNameForJob(job);
+                }
+            }
+            catch (Exception exception)
+            {
+                QueueManagerValidationText.Text = exception.Message;
+                QueueManagerValidationText.Visibility = Visibility.Visible;
+                return;
+            }
+
+            transcriptionQueue.Clear();
+            transcriptionQueue.AddRange(workingQueue.Select(job => job.Clone()));
+            queueManagerWorkingQueue = null;
+            SynchronizeSelectedFilesFromQueue();
+            selectedAudioFile = selectedAudioFiles[0];
+            FileNameText.Text = selectedAudioFiles.Count == 1
+                ? Path.GetFileName(selectedAudioFile)
+                : $"{selectedAudioFiles.Count} tracce · {Path.GetFileName(selectedAudioFile)}";
+            ToolTipService.SetToolTip(
+                FileNameText,
+                string.Join(Environment.NewLine, selectedAudioFiles));
+            MultiFileControls.Visibility = Visibility.Visible;
+            UpdateManageTracksButton();
             UpdateSelectedFilesPresentation();
-            OutputNameTextBox.Text = IsBatchMode
-                ? "{source}_trascrizione"
-                : $"{Path.GetFileNameWithoutExtension(selectedAudioFile)}_trascrizione";
             UpdateRecoverableCheckpoint();
             UpdateSettingsSummary();
             PrimaryActionButton.Content = selectedModelIsDownloaded
                 ? GetIdlePrimaryActionText()
                 : "Scarica modello";
+            AnimateQueueManager(open: false);
+            await AnalyzeSelectionAsync();
         }
 
-        private void RefreshQueueOrderSelector(int selectedIndex = 0)
+        private void SynchronizeSelectedFilesFromQueue()
         {
-            if (QueueOrderComboBox is null)
-            {
-                return;
-            }
-            QueueOrderComboBox.ItemsSource = selectedAudioFiles.Select(Path.GetFileName).ToArray();
-            QueueOrderComboBox.SelectedIndex = selectedAudioFiles.Count == 0
-                ? -1
-                : Math.Clamp(selectedIndex, 0, selectedAudioFiles.Count - 1);
-        }
-
-        private void MoveQueueItemUpButton_Click(object sender, RoutedEventArgs e) =>
-            MoveSelectedQueueItem(-1);
-
-        private void MoveQueueItemDownButton_Click(object sender, RoutedEventArgs e) =>
-            MoveSelectedQueueItem(1);
-
-        private void MoveSelectedQueueItem(int offset)
-        {
-            var index = QueueOrderComboBox.SelectedIndex;
-            var target = index + offset;
-            if (index < 0 || target < 0 || target >= selectedAudioFiles.Count)
-            {
-                return;
-            }
-            (selectedAudioFiles[index], selectedAudioFiles[target]) =
-                (selectedAudioFiles[target], selectedAudioFiles[index]);
-            selectedAudioFile = selectedAudioFiles[0];
-            RefreshQueueOrderSelector(target);
-            UpdateSelectedFilesPresentation();
-            UpdateOutputNamePreview();
-            UpdateRecoverableCheckpoint();
+            selectedAudioFiles.Clear();
+            selectedAudioFiles.AddRange(transcriptionQueue.SelectMany(job => job.Sources));
+            selectedAudioFile = selectedAudioFiles.FirstOrDefault();
         }
 
         private void LimitIntervalCheckBox_Changed(object sender, RoutedEventArgs e)
@@ -1420,19 +1979,7 @@ namespace FasterWhisperGui.Views
             UpdateSettingsSummary();
         }
 
-        private void OutputNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            UpdateOutputNamePreview();
-            UpdateRecoverableCheckpoint();
-            UpdateSettingsSummary();
-        }
-
-        private bool IsBatchMode =>
-            selectedAudioFiles.Count > 1 &&
-            string.Equals(
-                GetSelectedTag(MultiFileModeComboBox),
-                "batch",
-                StringComparison.Ordinal);
+        private bool IsBatchMode => transcriptionQueue.Count > 1;
 
         private void UpdateSelectedFilesPresentation(
             int activeBatchIndex = -1,
@@ -1445,22 +1992,21 @@ namespace FasterWhisperGui.Views
                 return;
             }
 
-            SelectedPartsText.Visibility = Visibility.Visible;
-            if (!IsBatchMode)
+            if (!IsBatchMode || batchStates is null)
             {
-                SelectedPartsText.Text = "Ordine: " + string.Join(
-                    "  →  ",
-                    selectedAudioFiles.Select(Path.GetFileName));
+                SelectedPartsText.Text = string.Empty;
+                SelectedPartsText.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            var states = batchStates ?? selectedAudioFiles
-                .Select((_, index) => index == activeBatchIndex ? "in corso" : "in attesa")
-                .ToArray();
+            SelectedPartsText.Visibility = Visibility.Visible;
+            var states = batchStates;
             var queueText = string.Join(
                 Environment.NewLine,
-                selectedAudioFiles.Select((path, index) =>
-                    $"{index + 1}. {Path.GetFileName(path)} — {states[index]}"));
+                transcriptionQueue.Select((job, index) =>
+                    $"{index + 1}. {Path.GetFileName(job.Sources[0])}" +
+                    (job.Sources.Count > 1 ? $" (+{job.Sources.Count - 1} parti)" : string.Empty) +
+                    $" — {states[index]}"));
             SelectedPartsText.Text = queueText;
             ToolTipService.SetToolTip(SelectedPartsText, queueText);
         }
@@ -1468,7 +2014,7 @@ namespace FasterWhisperGui.Views
         private string GetIdlePrimaryActionText()
         {
             return IsBatchMode
-                ? $"Avvia coda ({selectedAudioFiles.Count})"
+                ? $"Avvia coda ({transcriptionQueue.Count})"
                 : "Avvia trascrizione";
         }
 
@@ -1479,16 +2025,18 @@ namespace FasterWhisperGui.Views
                 $"{Path.GetFileNameWithoutExtension(sourcePath)}_trascrizione.whisperls.json");
         }
 
-        private string GetOutputNameForSource(string sourcePath, int index)
+        private static string GetAutomaticOutputName(TranscriptionQueueJob job)
         {
-            var sourceName = Path.GetFileNameWithoutExtension(sourcePath);
-            var template = string.IsNullOrWhiteSpace(OutputNameTextBox?.Text)
-                ? "{source}_trascrizione"
-                : OutputNameTextBox.Text.Trim();
-            var expanded = template
-                .Replace("{source}", sourceName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{index}", (index + 1).ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase)
-                .Replace("{date}", DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+            return job.Sources.Count > 1
+                ? "LavoroMultiparte"
+                : Path.GetFileNameWithoutExtension(job.Sources[0]);
+        }
+
+        private static string GetOutputNameForJob(TranscriptionQueueJob job)
+        {
+            var expanded = string.IsNullOrWhiteSpace(job.OutputName)
+                ? GetAutomaticOutputName(job)
+                : job.OutputName.Trim();
             var invalid = Path.GetInvalidFileNameChars();
             if (expanded.Length == 0 || expanded.IndexOfAny(invalid) >= 0 || expanded.EndsWith(' ') || expanded.EndsWith('.'))
             {
@@ -1502,32 +2050,6 @@ namespace FasterWhisperGui.Views
                 throw new InvalidOperationException("Il nome dell'output è riservato da Windows.");
             }
             return expanded;
-        }
-
-        private void UpdateOutputNamePreview()
-        {
-            if (OutputNamePreviewText is null)
-            {
-                return;
-            }
-            if (selectedAudioFile is null)
-            {
-                OutputNamePreviewText.Text = "Anteprima: seleziona una traccia";
-                return;
-            }
-            try
-            {
-                var preview = GetOutputNameForSource(selectedAudioFile, 0);
-                OutputNamePreviewText.Text = IsBatchMode && selectedAudioFiles.Count > 1
-                    ? $"Anteprima: {preview} · {GetOutputNameForSource(selectedAudioFiles[1], 1)}"
-                    : $"Anteprima: {preview}";
-                OutputNamePreviewText.Foreground = (Brush)Application.Current.Resources["MutedTextBrush"];
-            }
-            catch (Exception exception)
-            {
-                OutputNamePreviewText.Text = exception.Message;
-                OutputNamePreviewText.Foreground = (Brush)Application.Current.Resources["LogErrorBrush"];
-            }
         }
 
         private void UpdateRecoverableCheckpoint()
@@ -1544,7 +2066,7 @@ namespace FasterWhisperGui.Views
                     {
                         candidate = Path.Combine(
                             outputDirectory,
-                            $"{GetOutputNameForSource(selectedAudioFile, 0)}.whisperls.json");
+                            $"{GetOutputNameForJob(transcriptionQueue[0])}.whisperls.json");
                     }
                     catch
                     {
@@ -1685,11 +2207,11 @@ namespace FasterWhisperGui.Views
                 throw new InvalidOperationException(
                     "La fine dell'intervallo deve essere successiva all'inizio.");
             }
-            if (selectedAudioFiles.Count > 1 && !IsBatchMode)
+            if (transcriptionQueue.Any(job => job.Sources.Count > 1))
             {
                 throw new InvalidOperationException(
-                    "L'intervallo temporale non è disponibile per una trascrizione multiparte. " +
-                    "Seleziona la modalità coda oppure una sola traccia.");
+                    "L'intervallo temporale non è disponibile quando la coda contiene un lavoro multiparte. " +
+                    "Separa quel lavoro in tracce singole per usare l'intervallo.");
             }
             return new TimeInterval(start, end);
         }
@@ -1788,11 +2310,11 @@ namespace FasterWhisperGui.Views
                     TryParseTimeOffset(ClipStartTextBox.Text, out var clipStart) &&
                     TryParseTimeOffset(ClipEndTextBox.Text, out var clipEnd) &&
                     clipEnd > clipStart &&
-                    (selectedAudioFiles.Count == 1 || IsBatchMode))
+                    transcriptionQueue.All(job => job.Sources.Count == 1))
                 {
                     var intervalDuration = TimeSpan.FromSeconds(clipEnd - clipStart);
                     duration = IsBatchMode
-                        ? TimeSpan.FromTicks(intervalDuration.Ticks * selectedAudioFiles.Count)
+                        ? TimeSpan.FromTicks(intervalDuration.Ticks * transcriptionQueue.Count)
                         : intervalDuration;
                 }
 
@@ -1868,12 +2390,16 @@ namespace FasterWhisperGui.Views
                     }
                     else
                     {
+                        var onlyJob = transcriptionQueue.Count == 1
+                            ? transcriptionQueue[0]
+                            : new TranscriptionQueueJob(selectedAudioFiles);
                         await TranscribeSourcesAsync(
                             model,
-                            selectedAudioFiles,
-                            localCts.Token);
+                            onlyJob.Sources,
+                            localCts.Token,
+                            outputName: GetOutputNameForJob(onlyJob));
                         ShowStatus(
-                            selectedAudioFiles.Count > 1
+                            onlyJob.Sources.Count > 1
                                 ? "Le tracce audio selezionate sono state unite e trascritte con successo!"
                                 : "La traccia audio selezionata è stata trascritta con successo!",
                             InfoBarSeverity.Informational);
@@ -1914,8 +2440,8 @@ namespace FasterWhisperGui.Views
             {
                 XamlRoot = XamlRoot,
                 Title = "Interrompere la coda?",
-                Content = "Puoi saltare soltanto la traccia corrente oppure annullare tutti i lavori rimanenti.",
-                PrimaryButtonText = "Solo traccia corrente",
+                Content = "Puoi saltare soltanto il lavoro corrente oppure annullare tutti i lavori rimanenti.",
+                PrimaryButtonText = "Solo lavoro corrente",
                 SecondaryButtonText = "Intera coda",
                 CloseButtonText = "Continua",
                 DefaultButton = ContentDialogButton.Close
@@ -1942,27 +2468,32 @@ namespace FasterWhisperGui.Views
                 using var document = JsonDocument.Parse(await File.ReadAllTextAsync(PendingQueuePath));
                 var root = document.RootElement;
                 var jobs = root.GetProperty("jobs").EnumerateArray().ToArray();
-                var sources = jobs
-                    .Select(job => job.GetProperty("sources")[0].GetString())
-                    .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
-                    .Select(path => path!)
+                var restoredQueue = jobs
+                    .Select(job => new TranscriptionQueueJob(
+                        job.GetProperty("sources")
+                            .EnumerateArray()
+                            .Select(source => source.GetString())
+                            .Where(path => !string.IsNullOrWhiteSpace(path))
+                            .Select(path => path!),
+                        outputName: job.TryGetProperty("outputName", out var outputName)
+                            ? outputName.GetString()
+                            : null))
+                    .Where(job => job.Sources.Count > 0)
                     .ToArray();
-                if (sources.Length == 0)
+                if (restoredQueue.Length == 0 ||
+                    restoredQueue.SelectMany(job => job.Sources).Any(path => !File.Exists(path)))
                 {
                     throw new InvalidOperationException("I file della coda non sono più disponibili.");
                 }
 
-                selectedAudioFiles.Clear();
-                selectedAudioFiles.AddRange(sources);
-                selectedAudioFile = sources[0];
-                FileNameText.Text = $"{sources.Length} tracce · {Path.GetFileName(sources[0])}";
-                MultiFileModeComboBox.Visibility = Visibility.Visible;
-                QueueOrderControls.Visibility = Visibility.Visible;
-                RefreshQueueOrderSelector();
-                MultiFileModeComboBox.SelectedIndex = 1;
-                OutputNameTextBox.Text = root.TryGetProperty("outputNameTemplate", out var template)
-                    ? template.GetString() ?? "{source}_trascrizione"
-                    : "{source}_trascrizione";
+                transcriptionQueue.Clear();
+                transcriptionQueue.AddRange(restoredQueue);
+                SynchronizeSelectedFilesFromQueue();
+                FileNameText.Text = selectedAudioFiles.Count == 1
+                    ? Path.GetFileName(selectedAudioFile)
+                    : $"{selectedAudioFiles.Count} tracce · {Path.GetFileName(selectedAudioFile)}";
+                MultiFileControls.Visibility = Visibility.Visible;
+                UpdateManageTracksButton();
                 SettingsSummaryPanel.Visibility = Visibility.Visible;
                 AnalysisPanel.Visibility = Visibility.Visible;
                 ActionPanel.Visibility = Visibility.Visible;
@@ -2063,7 +2594,7 @@ namespace FasterWhisperGui.Views
 
         private async Task TranscribeBatchAsync(string model, CancellationToken token)
         {
-            var states = selectedAudioFiles.Select(_ => "in attesa").ToArray();
+            var states = transcriptionQueue.Select(_ => "in attesa").ToArray();
             Directory.CreateDirectory(AppDataDirectory);
             var controlPath = Path.Combine(AppDataDirectory, "queue-control.json");
             File.Delete(controlPath);
@@ -2073,17 +2604,18 @@ namespace FasterWhisperGui.Views
                 throw new InvalidOperationException("Seleziona almeno un formato di output.");
             }
             var interval = GetSelectedInterval();
-            var jobs = selectedAudioFiles.Select((source, index) =>
+            var jobs = transcriptionQueue.Select((queueJob, index) =>
             {
+                var source = queueJob.Sources[0];
                 var outputDirectory = selectedOutputDirectory ??
                     Path.GetDirectoryName(source) ??
                     throw new InvalidOperationException("Cartella del file non disponibile.");
-                var outputName = GetOutputNameForSource(source, index);
+                var outputName = GetOutputNameForJob(queueJob);
                 var checkpoint = Path.Combine(outputDirectory, $"{outputName}.whisperls.json");
                 return new
                 {
                     id = $"job-{index + 1}",
-                    sources = new[] { source },
+                    sources = queueJob.Sources.ToArray(),
                     model,
                     device = GetSelectedTag(DeviceComboBox),
                     language = GetSelectedTag(LanguageComboBox),
@@ -2102,7 +2634,7 @@ namespace FasterWhisperGui.Views
             await File.WriteAllTextAsync(
                 PendingQueuePath,
                 JsonSerializer.Serialize(
-                    new { version = 1, outputNameTemplate = OutputNameTextBox.Text, controlPath, jobs },
+                    new { version = 3, controlPath, jobs },
                     new JsonSerializerOptions { WriteIndented = true }),
                 token);
 
@@ -2187,7 +2719,8 @@ namespace FasterWhisperGui.Views
             CancellationToken token,
             int batchIndex = 0,
             int batchCount = 1,
-            string? checkpointPath = null)
+            string? checkpointPath = null,
+            string? outputName = null)
         {
             if (sourceFiles.Count == 0)
             {
@@ -2222,7 +2755,7 @@ namespace FasterWhisperGui.Views
                     "--language", GetSelectedTag(LanguageComboBox),
                     "--beam-size", ((int)Math.Round(BeamSizeNumberBox.Value)).ToString(CultureInfo.InvariantCulture),
                     "--output-dir", outputDirectory,
-                    "--output-name", GetOutputNameForSource(primarySource, batchIndex),
+                    "--output-name", outputName ?? Path.GetFileNameWithoutExtension(primarySource),
                     "--auto-rename"
                 });
                 foreach (var additionalAudioFile in sourceFiles.Skip(1))
@@ -2687,9 +3220,7 @@ namespace FasterWhisperGui.Views
         private void SetBusy(bool busy)
         {
             BrowseFileButton.IsEnabled = !busy;
-            MultiFileModeComboBox.IsEnabled = !busy;
-            QueueOrderComboBox.IsEnabled = !busy;
-            QueueOrderControls.IsHitTestVisible = !busy;
+            MultiFileControls.IsEnabled = !busy;
             OpenModelManagerButton.IsEnabled = !busy;
             ModelComboBox.IsEnabled = !busy;
             LanguageComboBox.IsEnabled = !busy;
@@ -2703,7 +3234,6 @@ namespace FasterWhisperGui.Views
             TxtOutputCheckBox.IsEnabled = !busy;
             SrtOutputCheckBox.IsEnabled = !busy;
             DocxOutputCheckBox.IsEnabled = !busy;
-            OutputNameTextBox.IsEnabled = !busy;
             ChooseOutputFolderButton.IsEnabled = !busy;
             PrimaryActionButton.IsEnabled = !busy;
             ResumeCheckpointButton.IsEnabled = !busy;
@@ -3303,6 +3833,33 @@ namespace FasterWhisperGui.Views
             double GpuMemoryGb,
             int LogicalProcessors,
             double SystemMemoryGb);
+        private sealed class TranscriptionQueueJob
+        {
+            public TranscriptionQueueJob(
+                IEnumerable<string> sources,
+                string? key = null,
+                string? outputName = null)
+            {
+                Sources = sources.ToList();
+                Key = key ?? Guid.NewGuid().ToString("N");
+                OutputName = outputName;
+            }
+
+            public List<string> Sources { get; }
+            public string Key { get; }
+            public string? OutputName { get; set; }
+
+            public TranscriptionQueueJob Clone() => new(Sources, Key, OutputName);
+        }
+        public sealed class QueueManagerItem
+        {
+            public required string JobKey { get; init; }
+            public required string Title { get; init; }
+            public required string KindLabel { get; init; }
+            public required string SourcesLabel { get; init; }
+            public string OutputName { get; set; } = string.Empty;
+            public required string DefaultOutputName { get; init; }
+        }
         public sealed class ModelManagerItem
         {
             public required string ModelName { get; init; }

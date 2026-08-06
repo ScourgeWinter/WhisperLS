@@ -59,35 +59,38 @@ crea automaticamente `(2)`, `(3)` e così via.
 - Audio: MP3, WAV, M4A, FLAC, AAC, OGG e WMA.
 - Video: MP4, MOV, MKV, AVI e WEBM.
 - Output selezionabili singolarmente: TXT, SRT e DOCX.
-- Nome output personalizzabile senza estensione.
+- Nome output personalizzabile per ogni lavoro direttamente nel manager della coda.
 - Scrittura atomica: un file finale compare solo dopo una scrittura riuscita.
 - Raggruppamento automatico del testo in paragrafi leggibili.
 
-### Più tracce
+### Più tracce e code miste
 
-Con una selezione multipla puoi scegliere due modalità:
+Dopo la selezione, ogni traccia parte come lavoro singolo e **Gestisci coda**
+apre il manager dedicato anche quando è presente un solo file. Ogni riga
+rappresenta un lavoro e può essere:
 
-- **Unica trascrizione multiparte**: utile quando una lezione è divisa in più
-  registrazioni. Produce un solo documento; TXT e DOCX mostrano chiaramente la
-  fine di ogni parte, mentre l’SRT mantiene una timeline continua.
-- **Lavori separati in coda**: produce un output indipendente per ogni traccia.
-  Il worker mantiene il modello in memoria tra lavori compatibili, evitando
-  ricaricamenti inutili. Un errore su una traccia non interrompe le successive.
+- **Singolo**: produce un output indipendente per quella traccia.
+- **Multiparte**: unisce più registrazioni nello stesso documento; TXT e DOCX
+  mostrano chiaramente la fine di ogni parte, mentre l’SRT mantiene una timeline
+  continua.
+
+La stessa coda può contenere contemporaneamente lavori singoli e multiparte.
+Nel manager puoi cambiarne l’ordine, unire un lavoro al precedente, separare un
+lavoro multiparte in elementi singoli oppure rimuoverlo. L’ordine può essere
+modificato anche trascinando i lavori direttamente nella posizione desiderata.
+Il worker mantiene il
+modello in memoria tra lavori compatibili, evitando ricaricamenti inutili; un
+errore su un lavoro non interrompe i successivi.
 
 La coda mostra per ogni elemento gli stati **In attesa**, **In corso**,
 **Completata**, **Fallita** o **Annullata**. Se WhisperLS viene chiuso durante
 una coda, al riavvio compare **Ripristina coda**.
 
-Per i nomi batch sono disponibili questi segnaposto:
-
-| Segnaposto | Risultato di esempio |
-|---|---|
-| `{source}` | nome del file senza estensione |
-| `{index}` | posizione nella coda, a partire da 1 |
-| `{date}` | data nel formato `yyyy-MM-dd` |
-
-Il template predefinito è `{source}_trascrizione`. L’anteprima nelle
-impostazioni mostra i nomi reali prima di avviare il lavoro.
+Il **Manager della coda** consente di assegnare un nome distinto a ogni lavoro.
+Il campo può essere lasciato vuoto: un lavoro singolo usa automaticamente il
+nome del file sorgente, mentre un lavoro multiparte usa `LavoroMultiparte`.
+WhisperLS evita comunque di sovrascrivere file esistenti aggiungendo un suffisso
+progressivo quando necessario.
 
 ### Recupero delle interruzioni
 
