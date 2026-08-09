@@ -1,50 +1,62 @@
 # Changelog
 
-Le modifiche rilevanti di WhisperLS sono documentate in questo file. Il
-progetto segue il [Semantic Versioning](https://semver.org/).
+All notable changes to WhisperLS are documented in this file. The project
+follows [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Changed
+
+- Stabilized GitHub Actions by pinning the Ruff development dependency and
+  defining an explicit lint policy.
+- Separated tests, linting, WinUI compilation, and updater compilation so a
+  failed check can no longer be hidden by a later successful command.
+- Updated official GitHub Actions runtimes and prevented duplicate CI runs on
+  release tags.
+- Expanded public-repository ignore rules for local IDE and coding-agent files.
 
 ## [1.1.0] - 2026-08-09
 
-### Novità
+### Added
 
-- Interfaccia disponibile in italiano, inglese, francese, spagnolo, tedesco e
-  portoghese.
-- Scelta della lingua al primo avvio tramite bandiere, memorizzazione locale e
-  selettore sempre accessibile dalla barra superiore.
-- Lingua di trascrizione inizialmente allineata alla lingua dell’interfaccia,
-  ma modificabile in modo indipendente.
-- Console, messaggi di stato, categorie, avanzamento, avvisi ed errori
-  localizzati nella lingua scelta.
-- Manager della coda riprogettato per combinare liberamente lavori singoli e
-  trascrizioni multiparte nella stessa coda.
-- Riordino tramite trascinamento animato e confinato nell’area della coda.
-- Nome di output configurabile per ogni lavoro, con valori automatici sicuri.
+- Interface available in Italian, English, French, Spanish, German, and
+  Portuguese.
+- First-run language selection with flags, persistent local storage, and an
+  interface-language selector in the top bar.
+- Transcription language initially follows the interface language while
+  remaining independently configurable.
+- Localized console output, status messages, categories, progress, warnings,
+  and errors.
+- Redesigned queue manager supporting independent jobs and multipart
+  transcriptions within the same queue.
+- Animated drag-and-drop reordering constrained to the queue area.
+- Configurable output name for each job with safe automatic defaults.
 
-### Miglioramenti
+### Improved
 
-- Le tracce multiple vengono create come lavori separati per impostazione
-  predefinita e possono essere unite solo quando richiesto dall’utente.
-- Layout del manager più compatto, azioni esplicite e maggiore distinzione fra
-  lavoro e file sorgente.
-- Traduzione nativa delle voci dei selettori, inclusi dispositivo automatico e
-  lingue di trascrizione.
-- Documentazione completa disponibile nelle sei lingue supportate.
+- Multiple selected tracks now start as separate jobs and are merged only when
+  explicitly requested.
+- More compact queue-manager layout, explicit actions, and clearer separation
+  between jobs and source files.
+- Native translation of selector values, including automatic device selection
+  and transcription languages.
+- Complete documentation in all six supported interface languages.
 
-### Correzioni
+### Fixed
 
-- Risolti crash all’apertura del manager della coda.
-- Risolte sovrapposizioni del primo lavoro durante il trascinamento.
-- Corretti bordi tagliati, allineamento dei comandi e contenimento del drag and
-  drop.
-- Eliminati residui in italiano nella modalità francese e nelle categorie
-  della console.
+- Fixed crashes when opening the queue manager.
+- Fixed first-job overlap during drag-and-drop reordering.
+- Fixed clipped borders, command alignment, and drag-and-drop containment.
+- Removed untranslated Italian strings from the French interface and console
+  categories.
 
 ## [1.0.0] - 2026-08-02
 
-- Prima release pubblica di WhisperLS.
-- Trascrizione locale audio/video con output TXT, SRT e DOCX.
-- Installer Full e Light, pacchetto Portable, updater integrato, Model Manager,
-  checkpoint di recupero e supporto CUDA/CPU.
+- First public release of WhisperLS.
+- Local audio and video transcription with TXT, SRT, and DOCX output.
+- Full and Light installers, Portable package, integrated updater, Model
+  Manager, recovery checkpoints, and CUDA/CPU support.
 
+[Unreleased]: https://github.com/ScourgeWinter/WhisperLS/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/ScourgeWinter/WhisperLS/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ScourgeWinter/WhisperLS/releases/tag/v1.0.0

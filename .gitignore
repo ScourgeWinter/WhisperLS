@@ -29,8 +29,13 @@ artifacts/
 
 # Local IDE/agent files
 .vscode/
+.idea/
 .claude/
+.codex/
+.agents/
 .cursor/
+CLAUDE.md
+AGENTS.md
 
 # Local reference scaffold not needed by the app
 RecoveryReference/
