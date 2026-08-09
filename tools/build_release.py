@@ -114,7 +114,7 @@ def write_update_manifest(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", default="1.0.0")
+    parser.add_argument("--version", default="1.1.0")
     parser.add_argument("--skip-installers", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

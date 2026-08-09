@@ -1,4 +1,6 @@
-# WhisperLS 1.0.0
+# WhisperLS 1.1.0
+
+**Italiano** · [English](README.en.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Português](README.pt.md)
 
 **Trascrizione locale di audio e video, semplice da usare e completa quando serve.**
 
@@ -11,15 +13,19 @@ l’audio non viene inviato a servizi esterni.
 > WhisperLS legge direttamente sia file audio sia file video. Non è necessario
 > convertire manualmente un MP4, MKV o MOV in audio.
 
+> **Novità 1.1.0:** interfaccia e console in sei lingue, lingua di
+> trascrizione inizialmente allineata all’interfaccia e nuovo manager per code
+> miste con drag and drop. Consulta il [changelog completo](CHANGELOG.md).
+
 ## Download
 
 Apri la sezione **Releases** del repository e scegli il pacchetto adatto:
 
 | Pacchetto | Per chi è pensato | CUDA inclusa |
 |---|---|---:|
-| `WhisperLS-Setup-1.0.0-Full-x64.exe` | Scelta consigliata per la maggior parte degli utenti | Sì |
-| `WhisperLS-Setup-1.0.0-Light-x64.exe` | Computer senza GPU NVIDIA o sistemi già configurati | No |
-| `WhisperLS-Portable-1.0.0-Full-x64.zip` | Uso senza installazione | Sì |
+| `WhisperLS-Setup-1.1.0-Full-x64.exe` | Scelta consigliata per la maggior parte degli utenti | Sì |
+| `WhisperLS-Setup-1.1.0-Light-x64.exe` | Computer senza GPU NVIDIA o sistemi già configurati | No |
+| `WhisperLS-Portable-1.1.0-Full-x64.zip` | Uso senza installazione | Sì |
 
 Le edizioni ufficiali includono un runtime Python privato: **non devi installare
 Python, FFmpeg o le dipendenze manualmente**. I modelli vengono scaricati
@@ -41,9 +47,10 @@ ufficiale e, se vuoi, confronta l’hash con `SHA256SUMS.txt`.
 
 ## Primo utilizzo
 
-1. Avvia WhisperLS e premi **Scegli tracce**.
-2. Seleziona uno o più file audio/video.
-3. Apri **Impostazioni** e scegli modello, lingua e formati di output.
+1. Al primo avvio scegli la lingua dell’interfaccia tra italiano, inglese,
+   francese, spagnolo, tedesco e portoghese.
+2. Premi **Scegli tracce** e seleziona uno o più file audio/video.
+3. Apri **Impostazioni** e scegli modello, lingua audio e formati di output.
 4. Se il modello non è ancora presente, premi **Scarica modello**.
 5. Premi **Avvia trascrizione**.
 6. Al termine usa **Apri cartella output**.
@@ -53,6 +60,17 @@ impostazioni. Se un nome esiste già, WhisperLS conserva il file precedente e
 crea automaticamente `(2)`, `(3)` e così via.
 
 ## Funzioni principali
+
+### Interfaccia multilingue
+
+- Onboarding linguistico dedicato al primo avvio.
+- Interfaccia disponibile in italiano, inglese, francese, spagnolo, tedesco e
+  portoghese.
+- La scelta viene conservata in `%LocalAppData%\WhisperLS\preferences.json` e
+  rimane valida dopo aggiornamenti e reinstallazioni standard.
+- La lingua dell’interfaccia può essere cambiata in qualsiasi momento dal
+  pulsante con la bandiera nella barra superiore. La lingua della trascrizione
+  parte dallo stesso valore, ma può essere modificata indipendentemente.
 
 ### Audio, video e output
 
@@ -305,7 +323,7 @@ requirements*.txt       dipendenze base e runtime NVIDIA Full
 - Il manifest updater accetta soltanto il repository ufficiale e impedisce
   percorsi che escano dalle directory di staging/installazione.
 - Gli hash garantiscono l’integrità del download, ma non sostituiscono una firma
-  digitale. La versione 1.0.0 non è firmata.
+  digitale. La versione 1.1.0 non è firmata.
 - La qualità dipende da registrazione, rumore, lingua e modello scelto.
 - L’appropriatezza hardware è indicativa.
 

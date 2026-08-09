@@ -4,6 +4,12 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+*.lnk
 
 # Whisper/model/runtime outputs
 audio.*

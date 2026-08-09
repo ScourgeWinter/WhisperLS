@@ -37,6 +37,7 @@
         <Content Include="Assets\Wide310x150Logo.scale-200.png" />
         <Content Include="Assets\WhisperLS.ico" CopyToOutputDirectory="PreserveNewest" />
         <Content Include="Assets\splash.png" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="Assets\Flags\*.svg" CopyToOutputDirectory="PreserveNewest" />
         <Content Include="..\Whisper.py" Link="Backend\Whisper.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
         <Content Include="..\requirements.txt" Link="Backend\requirements.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>

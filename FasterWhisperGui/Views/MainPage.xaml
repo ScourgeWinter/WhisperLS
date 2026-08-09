@@ -127,6 +127,19 @@
                         ToolTipService.ToolTip="Controlla aggiornamenti">
                         <FontIcon FontSize="14" Glyph="&#xE895;" />
                     </Button>
+                    <Button
+                        x:Name="OpenLanguageSelectorButton"
+                        Style="{StaticResource ChromeButtonStyle}"
+                        IsTabStop="True"
+                        AutomationProperties.Name="Cambia lingua interfaccia"
+                        Click="OpenLanguageSelectorButton_Click"
+                        ToolTipService.ToolTip="Cambia lingua interfaccia">
+                        <Image
+                            x:Name="CurrentInterfaceLanguageFlag"
+                            Width="24"
+                            Height="16"
+                            Source="/Assets/Flags/it.svg" />
+                    </Button>
                     <Border
                         Width="1"
                         Height="20"
@@ -1372,6 +1385,149 @@
                                     Click="RefreshModelManagerButton_Click"
                                     Content="Aggiorna" />
                             </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Grid
+                    x:Name="LanguageOnboardingOverlay"
+                    Background="#F2080D15"
+                    Visibility="Collapsed">
+                    <Border
+                        Width="560"
+                        MaxWidth="560"
+                        Margin="24"
+                        Padding="30"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource WorkspaceBackgroundBrush}"
+                        BorderBrush="{StaticResource ElectricBlueBrush}"
+                        BorderThickness="2"
+                        CornerRadius="18">
+                        <Grid>
+                            <Button
+                                x:Name="CloseLanguageSelectorButton"
+                                Width="36"
+                                Height="36"
+                                Padding="0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                AutomationProperties.Name="Chiudi selettore lingua"
+                                Click="CloseLanguageSelectorButton_Click"
+                                Visibility="Collapsed">
+                                <FontIcon FontSize="12" Glyph="&#xE8BB;" />
+                            </Button>
+                            <StackPanel Margin="0,8,0,0" Spacing="22">
+                            <StackPanel HorizontalAlignment="Center" Spacing="6">
+                                <Border
+                                    Width="58"
+                                    Height="58"
+                                    HorizontalAlignment="Center"
+                                    Background="{StaticResource ElectricBlueBrush}"
+                                    CornerRadius="18">
+                                    <FontIcon
+                                        FontFamily="Segoe Fluent Icons"
+                                        FontSize="28"
+                                        Foreground="#07101A"
+                                        Glyph="&#xE774;" />
+                                </Border>
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="28"
+                                    FontWeight="SemiBold"
+                                    Text="Seleziona la lingua" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource MutedTextBrush}"
+                                    Text="Potrai modificarla in qualsiasi momento dalla barra superiore."
+                                    TextAlignment="Center"
+                                    TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+
+                            <Grid ColumnSpacing="10" RowSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Button
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Padding="16,14"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnboardingLanguageButton_Click"
+                                    Tag="it">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="5">
+                                        <Image Width="48" Height="32" Source="/Assets/Flags/it.svg" />
+                                        <TextBlock HorizontalAlignment="Center" Text="Italiano" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Padding="16,14"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnboardingLanguageButton_Click"
+                                    Tag="en">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="5">
+                                        <Image Width="48" Height="32" Source="/Assets/Flags/en.svg" />
+                                        <TextBlock HorizontalAlignment="Center" Text="English" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Grid.Row="0"
+                                    Grid.Column="2"
+                                    Padding="16,14"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnboardingLanguageButton_Click"
+                                    Tag="fr">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="5">
+                                        <Image Width="48" Height="32" Source="/Assets/Flags/fr.svg" />
+                                        <TextBlock HorizontalAlignment="Center" Text="Français" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Padding="16,14"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnboardingLanguageButton_Click"
+                                    Tag="es">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="5">
+                                        <Image Width="48" Height="32" Source="/Assets/Flags/es.svg" />
+                                        <TextBlock HorizontalAlignment="Center" Text="Español" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Padding="16,14"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnboardingLanguageButton_Click"
+                                    Tag="de">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="5">
+                                        <Image Width="48" Height="32" Source="/Assets/Flags/de.svg" />
+                                        <TextBlock HorizontalAlignment="Center" Text="Deutsch" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Grid.Row="1"
+                                    Grid.Column="2"
+                                    Padding="16,14"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnboardingLanguageButton_Click"
+                                    Tag="pt">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="5">
+                                        <Image Width="48" Height="32" Source="/Assets/Flags/pt.svg" />
+                                        <TextBlock HorizontalAlignment="Center" Text="Português" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </Grid>

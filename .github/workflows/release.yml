@@ -9,7 +9,7 @@ on:
       version:
         description: "Versione semantica senza prefisso v"
         required: true
-        default: "1.0.0"
+        default: "1.1.0"
 
 permissions:
   contents: write
@@ -63,7 +63,8 @@ jobs:
           name: WhisperLS ${{ steps.version.outputs.value }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          body_path: release-notes/v${{ steps.version.outputs.value }}.md
+          generate_release_notes: false
           files: |
             artifacts/WhisperLS-Setup-${{ steps.version.outputs.value }}-Full-x64.exe
             artifacts/WhisperLS-Setup-${{ steps.version.outputs.value }}-Light-x64.exe

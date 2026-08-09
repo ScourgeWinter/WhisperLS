@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Windowing;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -126,6 +127,22 @@ namespace FasterWhisperGui.Views
                 AnimateWindowIn();
             }
 
+            ApplyCurrentLocalization();
+            UpdateCurrentLanguageButton();
+
+            if (!LocalizationService.HasSavedLanguage)
+            {
+                CloseLanguageSelectorButton.Visibility = Visibility.Collapsed;
+                LanguageOnboardingOverlay.Visibility = Visibility.Visible;
+                return;
+            }
+
+            InitializeMainExperience();
+        }
+
+        private void InitializeMainExperience()
+        {
+
             if (initialized)
             {
                 return;
@@ -135,7 +152,7 @@ namespace FasterWhisperGui.Views
             ModelComboBox.ItemsSource = modelOptions;
             ModelComboBox.SelectedItem = modelOptions.First(option => option.Name == "medium");
             UpdateModelSelectorBorderState();
-            LanguageComboBox.SelectedIndex = 0;
+            SelectTranscriptionLanguageForInterface();
             DeviceComboBox.SelectedIndex = 0;
             initialized = true;
             if (File.Exists(PendingQueuePath))
@@ -147,6 +164,84 @@ namespace FasterWhisperGui.Views
             UpdateSettingsSummary();
             UpdateService.ConfirmSuccessfulStartup();
             _ = CheckForUpdatesAsync(manual: false);
+        }
+
+        private void OnboardingLanguageButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: string languageCode })
+            {
+                return;
+            }
+
+            LocalizationService.SetLanguage(languageCode);
+            LanguageOnboardingOverlay.Visibility = Visibility.Collapsed;
+            ApplyCurrentLocalization();
+            UpdateCurrentLanguageButton();
+            if (initialized)
+            {
+                SelectTranscriptionLanguageForInterface();
+                RefreshLocalizedState();
+            }
+            else
+            {
+                InitializeMainExperience();
+            }
+        }
+
+        private void OpenLanguageSelectorButton_Click(object sender, RoutedEventArgs e)
+        {
+            CloseLanguageSelectorButton.Visibility = Visibility.Visible;
+            LanguageOnboardingOverlay.Visibility = Visibility.Visible;
+        }
+
+        private void CloseLanguageSelectorButton_Click(object sender, RoutedEventArgs e) =>
+            LanguageOnboardingOverlay.Visibility = Visibility.Collapsed;
+
+        private void UpdateCurrentLanguageButton()
+        {
+            CurrentInterfaceLanguageFlag.Source = new SvgImageSource(
+                new Uri($"ms-appx:///Assets/Flags/{LocalizationService.CurrentLanguage}.svg"));
+        }
+
+        private void SelectTranscriptionLanguageForInterface()
+        {
+            var languageCode = LocalizationService.CurrentLanguage;
+            LanguageComboBox.SelectedItem = LanguageComboBox.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item => string.Equals(
+                    item.Tag as string,
+                    languageCode,
+                    StringComparison.OrdinalIgnoreCase))
+                ?? LanguageComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+        }
+
+        private void ApplyCurrentLocalization()
+        {
+            LocalizationService.ApplyToVisualTree(this);
+            DispatcherQueue.TryEnqueue(() => LocalizationService.ApplyToVisualTree(this));
+        }
+
+        private void RefreshLocalizedState()
+        {
+            UpdateSettingsSummary();
+            UpdateManageTracksButton();
+            PrimaryActionButton.Content = selectedModelIsDownloaded
+                ? GetIdlePrimaryActionText()
+                : LocalizationService.Get("Scarica") + " " + LocalizationService.Get("Modello").ToLowerInvariant();
+            ConsoleToggleStateText.Text = LocalizationService.Get(consoleIsOpen ? "Nascondi" : "Mostra");
+            AutomationProperties.SetName(
+                ToggleConsoleButton,
+                LocalizationService.Get(consoleIsOpen ? "Nascondi console" : "Mostra console"));
+
+            if (queueManagerOpen)
+            {
+                RefreshQueueManager(Math.Max(0, QueueManagerListView.SelectedIndex));
+            }
+            if (modelManagerOpen)
+            {
+                _ = LoadModelManagerAsync(CancellationToken.None);
+            }
+            ApplyCurrentLocalization();
         }
 
         private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -190,19 +285,19 @@ namespace FasterWhisperGui.Views
         {
             var ignoreCheckBox = new CheckBox
             {
-                Content = "Non ricordarmelo più per questa versione",
+                Content = LocalizationService.Get("Non ricordarmelo più per questa versione"),
                 Visibility = candidate.CancelCount >= 3 ? Visibility.Visible : Visibility.Collapsed
             };
             var changelog = new Expander
             {
-                Header = "Novità della versione",
+                Header = LocalizationService.Get("Novità della versione"),
                 Content = new ScrollViewer
                 {
                     MaxHeight = 180,
                     Content = new TextBlock
                     {
                         Text = string.IsNullOrWhiteSpace(candidate.Changelog)
-                            ? "Consulta la release GitHub per i dettagli."
+                            ? LocalizationService.Get("Consulta la release GitHub per i dettagli.")
                             : candidate.Changelog,
                         TextWrapping = TextWrapping.WrapWholeWords,
                         IsTextSelectionEnabled = true
@@ -212,7 +307,8 @@ namespace FasterWhisperGui.Views
             var content = new StackPanel { Spacing = 12 };
             content.Children.Add(new TextBlock
             {
-                Text = $"È disponibile WhisperLS {candidate.Version}. Hai installato la versione {UpdateService.InstalledVersion.ToString(3)}.",
+                Text = LocalizationService.TranslateDynamic(
+                    $"È disponibile WhisperLS {candidate.Version}. Hai installato la versione {UpdateService.InstalledVersion.ToString(3)}."),
                 TextWrapping = TextWrapping.WrapWholeWords
             });
             content.Children.Add(changelog);
@@ -220,10 +316,10 @@ namespace FasterWhisperGui.Views
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = "Aggiornamento disponibile",
+                Title = LocalizationService.Get("Aggiornamento disponibile"),
                 Content = content,
                 PrimaryButtonText = "Download",
-                CloseButtonText = "Annulla",
+                CloseButtonText = LocalizationService.Get("Annulla"),
                 DefaultButton = ContentDialogButton.Primary
             };
             if (await dialog.ShowAsync() != ContentDialogResult.Primary)
@@ -244,11 +340,11 @@ namespace FasterWhisperGui.Views
         {
             using var downloadCts = new CancellationTokenSource();
             var progressBar = new ProgressBar { Minimum = 0, Maximum = 100 };
-            var progressText = new TextBlock { Text = "Preparazione del download..." };
+            var progressText = new TextBlock { Text = LocalizationService.Get("Preparazione del download...") };
             var content = new StackPanel { Spacing = 12 };
             content.Children.Add(new TextBlock
             {
-                Text = $"Download di WhisperLS {candidate.Version}",
+                Text = LocalizationService.TranslateDynamic($"Download di WhisperLS {candidate.Version}"),
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
             content.Children.Add(progressBar);
@@ -256,9 +352,9 @@ namespace FasterWhisperGui.Views
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = "Aggiornamento di WhisperLS",
+                Title = LocalizationService.Get("Aggiornamento di WhisperLS"),
                 Content = content,
-                CloseButtonText = "Annulla"
+                CloseButtonText = LocalizationService.Get("Annulla")
             };
             dialog.Closing += (_, args) =>
             {
@@ -446,6 +542,7 @@ namespace FasterWhisperGui.Views
         private void OpenSettingsDrawerButton_Click(object sender, RoutedEventArgs e)
         {
             AnimateSettingsDrawer(open: true);
+            DispatcherQueue.TryEnqueue(ApplyCurrentLocalization);
         }
 
         private async void OpenModelManagerButton_Click(object sender, RoutedEventArgs e)
@@ -639,11 +736,11 @@ namespace FasterWhisperGui.Views
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = $"Disinstallare {model}?",
-                Content =
-                    $"Il modello verrà eliminato dalla cache locale e dovrà essere scaricato nuovamente per riutilizzarlo.{aliasNotice}",
-                PrimaryButtonText = "Disinstalla",
-                CloseButtonText = "Annulla",
+                Title = LocalizationService.TranslateDynamic($"Disinstallare {model}?"),
+                Content = LocalizationService.TranslateDynamic(
+                    $"Il modello verrà eliminato dalla cache locale e dovrà essere scaricato nuovamente per riutilizzarlo.{aliasNotice}"),
+                PrimaryButtonText = LocalizationService.Get("Disinstalla"),
+                CloseButtonText = LocalizationService.Get("Annulla"),
                 DefaultButton = ContentDialogButton.Close
             };
             return await dialog.ShowAsync() == ContentDialogResult.Primary;
@@ -726,6 +823,7 @@ namespace FasterWhisperGui.Views
             ModelManagerSummaryText.Text =
                 $"{installedCount} presenti · {models.Length - installedCount} non presenti · ordinati per stato e appropriatezza";
             ModelManagerActivityText.Text = "Stima indicativa: non è un benchmark.";
+            DispatcherQueue.TryEnqueue(ApplyCurrentLocalization);
         }
 
         private async Task<Dictionary<string, bool>> GetModelStatusesAsync(CancellationToken token)
@@ -813,11 +911,11 @@ namespace FasterWhisperGui.Views
                         : "AppropriatenessLowBrush");
             var scoreDescription = score switch
             {
-                >= 85 => "Eccellente",
-                >= 70 => "Adatto",
-                >= 55 => "Discreto",
-                >= 35 => "Impegnativo",
-                _ => "Poco adatto"
+                >= 85 => LocalizationService.Get("Eccellente"),
+                >= 70 => LocalizationService.Get("Adatto"),
+                >= 55 => LocalizationService.Get("Discreto"),
+                >= 35 => LocalizationService.Get("Impegnativo"),
+                _ => LocalizationService.Get("Poco adatto")
             };
 
             return new ModelManagerItem
@@ -825,7 +923,7 @@ namespace FasterWhisperGui.Views
                 ModelName = model,
                 ClassLabel = GetModelClassLabel(model),
                 IsInstalled = installed,
-                StatusLabel = installed ? "PRESENTE" : "NON PRESENTE",
+                StatusLabel = LocalizationService.Get(installed ? "PRESENTE" : "NON PRESENTE"),
                 StatusBrush = GetResourceBrush(installed ? "StatusSuccessBrush" : "StatusMissingBrush"),
                 StatusBackgroundBrush = GetResourceBrush(
                     installed ? "StatusSuccessBackgroundBrush" : "StatusMissingBackgroundBrush"),
@@ -834,7 +932,7 @@ namespace FasterWhisperGui.Views
                 ScoreBrush = scoreBrush,
                 DownloadActionVisibility = installed ? Visibility.Collapsed : Visibility.Visible,
                 UninstallActionVisibility = installed ? Visibility.Visible : Visibility.Collapsed,
-                UninstallAutomationName = $"Disinstalla {model}"
+                UninstallAutomationName = $"{LocalizationService.Get("Disinstalla")} {model}"
             };
         }
 
@@ -874,10 +972,11 @@ namespace FasterWhisperGui.Views
 
         private static string GetModelClassLabel(string model)
         {
-            var language = model.EndsWith(".en", StringComparison.Ordinal) ? "inglese" : "multilingua";
+            var language = LocalizationService.Get(
+                model.EndsWith(".en", StringComparison.Ordinal) ? "inglese" : "multilingua");
             if (model == "large")
             {
-                return "Alias di large-v3 · multilingua";
+                return $"Alias: large-v3 · {LocalizationService.Get("multilingua")}";
             }
             if (model == "turbo")
             {
@@ -889,15 +988,15 @@ namespace FasterWhisperGui.Views
             }
             if (model is "large-v3-turbo" or "turbo")
             {
-                return "Turbo · multilingua";
+                return $"Turbo · {LocalizationService.Get("multilingua")}";
             }
             var family = model.Split('-', '.')[0] switch
             {
-                "tiny" => "Ultraleggero",
-                "base" => "Leggero",
-                "small" => "Compatto",
-                "medium" => "Bilanciato",
-                _ => "Massima accuratezza"
+                "tiny" => LocalizationService.Get("Ultraleggero"),
+                "base" => LocalizationService.Get("Leggero"),
+                "small" => LocalizationService.Get("Compatto"),
+                "medium" => LocalizationService.Get("Bilanciato"),
+                _ => LocalizationService.Get("Massima accuratezza")
             };
             return $"{family} · {language}";
         }
@@ -1426,8 +1525,14 @@ namespace FasterWhisperGui.Views
 
         private void UpdateManageTracksButton()
         {
-            var jobLabel = transcriptionQueue.Count == 1 ? "1 lavoro" : $"{transcriptionQueue.Count} lavori";
-            ManageTracksButtonText.Text = $"Gestisci coda · {selectedAudioFiles.Count} tracce · {jobLabel}";
+            var trackLabel = $"{selectedAudioFiles.Count} " + LocalizationService.Get(
+                selectedAudioFiles.Count == 1 ? "traccia" : "tracce");
+            var jobLabel = $"{transcriptionQueue.Count} " + LocalizationService.Get(
+                transcriptionQueue.Count == 1 ? "lavoro" : "lavori");
+            ManageTracksButtonText.Text = LocalizationService.Format(
+                "Gestisci coda · {0} · {1}",
+                trackLabel,
+                jobLabel);
         }
 
         private void ManageTracksButton_Click(object sender, RoutedEventArgs e)
@@ -1462,22 +1567,24 @@ namespace FasterWhisperGui.Views
                 .Select((job, index) => new QueueManagerItem
                 {
                     JobKey = job.Key,
-                    Title = $"LAVORO {index + 1}",
+                    Title = $"{LocalizationService.Get("LAVORO")} {index + 1}",
                     KindLabel = job.Sources.Count == 1
-                        ? "SINGOLO"
-                        : $"MULTIPARTE · {job.Sources.Count}",
+                        ? LocalizationService.Get("SINGOLO")
+                        : $"{LocalizationService.Get("MULTIPARTE")} · {job.Sources.Count}",
                     SourcesLabel = string.Join("  →  ", job.Sources.Select(Path.GetFileName)),
                     OutputName = job.OutputName ?? string.Empty,
                     DefaultOutputName = GetAutomaticOutputName(job)
                 })
                 .ToArray());
             QueueManagerListView.ItemsSource = queueManagerItems;
+            DispatcherQueue.TryEnqueue(ApplyCurrentLocalization);
             QueueManagerListView.SelectedIndex = Math.Clamp(selectedIndex, 0, workingQueue.Count - 1);
             QueueManagerValidationText.Visibility = Visibility.Collapsed;
             var trackCount = workingQueue.Sum(job => job.Sources.Count);
-            QueueManagerSummaryText.Text =
-                $"{trackCount} tracce · {workingQueue.Count} " +
-                (workingQueue.Count == 1 ? "lavoro" : "lavori");
+            var tracks = $"{trackCount} " + LocalizationService.Get(trackCount == 1 ? "traccia" : "tracce");
+            var jobs = $"{workingQueue.Count} " + LocalizationService.Get(
+                workingQueue.Count == 1 ? "lavoro" : "lavori");
+            QueueManagerSummaryText.Text = LocalizationService.Format("{0} · {1}", tracks, jobs);
             UpdateQueueManagerActions();
         }
 
@@ -2005,8 +2112,10 @@ namespace FasterWhisperGui.Views
                 Environment.NewLine,
                 transcriptionQueue.Select((job, index) =>
                     $"{index + 1}. {Path.GetFileName(job.Sources[0])}" +
-                    (job.Sources.Count > 1 ? $" (+{job.Sources.Count - 1} parti)" : string.Empty) +
-                    $" — {states[index]}"));
+                    (job.Sources.Count > 1
+                        ? $" (+{job.Sources.Count - 1} {LocalizationService.Get("parti")})"
+                        : string.Empty) +
+                    $" — {LocalizationService.TranslateDynamic(states[index])}"));
             SelectedPartsText.Text = queueText;
             ToolTipService.SetToolTip(SelectedPartsText, queueText);
         }
@@ -2014,8 +2123,8 @@ namespace FasterWhisperGui.Views
         private string GetIdlePrimaryActionText()
         {
             return IsBatchMode
-                ? $"Avvia coda ({transcriptionQueue.Count})"
-                : "Avvia trascrizione";
+                ? LocalizationService.Format("Avvia coda ({0})", transcriptionQueue.Count)
+                : LocalizationService.Get("Avvia trascrizione");
         }
 
         private static string BuildCheckpointPath(string sourcePath, string outputDirectory)
@@ -2160,14 +2269,14 @@ namespace FasterWhisperGui.Views
             SettingsSummaryText.Text = $"{model} · {language} · {device}";
             AdvancedSettingsSummaryText.Text =
                 $"Beam {Math.Max(1, (int)BeamSizeNumberBox.Value)} · " +
-                $"VAD {(VadToggle.IsOn ? "attivo" : "disattivo")} · " +
-                $"Timestamp {(WordTimestampsToggle.IsOn ? "attivi" : "disattivati")}" +
+                $"VAD {LocalizationService.Get(VadToggle.IsOn ? "attivo" : "disattivo")} · " +
+                $"Timestamp {LocalizationService.Get(WordTimestampsToggle.IsOn ? "attivi" : "disattivati")}" +
                 (LimitIntervalCheckBox.IsChecked == true
-                    ? $" · Intervallo {ClipStartTextBox.Text.Trim()}–{ClipEndTextBox.Text.Trim()}"
+                    ? $" · {LocalizationService.Get("Intervallo")} {ClipStartTextBox.Text.Trim()}–{ClipEndTextBox.Text.Trim()}"
                     : string.Empty);
             var formats = string.Join(", ", GetSelectedOutputFormats().Select(format => format.ToUpperInvariant()));
             OutputSummaryText.Text = selectedOutputDirectory is null
-                ? $"Output: cartella del file sorgente · {formats}"
+                ? $"Output: {LocalizationService.Get("cartella del file sorgente")} · {formats}"
                 : $"Output: {selectedOutputDirectory} · {formats}";
             ToolTipService.SetToolTip(OutputSummaryText, selectedOutputDirectory);
         }
@@ -2439,11 +2548,11 @@ namespace FasterWhisperGui.Views
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = "Interrompere la coda?",
-                Content = "Puoi saltare soltanto il lavoro corrente oppure annullare tutti i lavori rimanenti.",
-                PrimaryButtonText = "Solo lavoro corrente",
-                SecondaryButtonText = "Intera coda",
-                CloseButtonText = "Continua",
+                Title = LocalizationService.Get("Interrompere la coda?"),
+                Content = LocalizationService.Get("Puoi saltare soltanto il lavoro corrente oppure annullare tutti i lavori rimanenti."),
+                PrimaryButtonText = LocalizationService.Get("Solo lavoro corrente"),
+                SecondaryButtonText = LocalizationService.Get("Intera coda"),
+                CloseButtonText = LocalizationService.Get("Continua"),
                 DefaultButton = ContentDialogButton.Close
             };
             var result = await dialog.ShowAsync();
@@ -2899,10 +3008,11 @@ namespace FasterWhisperGui.Views
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = "Sostituire la trascrizione esistente?",
-                Content = $"Sono già presenti: {string.Join(", ", existing)}. I file verranno sostituiti.",
-                PrimaryButtonText = "Sostituisci",
-                CloseButtonText = "Annulla",
+                Title = LocalizationService.Get("Sostituire la trascrizione esistente?"),
+                Content = LocalizationService.TranslateDynamic(
+                    $"Sono già presenti: {string.Join(", ", existing)}. I file verranno sostituiti."),
+                PrimaryButtonText = LocalizationService.Get("Sostituisci"),
+                CloseButtonText = LocalizationService.Get("Annulla"),
                 DefaultButton = ContentDialogButton.Close
             };
             return await dialog.ShowAsync() == ContentDialogResult.Primary ? true : null;
@@ -3246,7 +3356,7 @@ namespace FasterWhisperGui.Views
 
         private void ShowStatus(string message, InfoBarSeverity severity)
         {
-            StatusInfoBar.Message = message;
+            StatusInfoBar.Message = LocalizationService.TranslateDynamic(message);
             StatusInfoBar.Severity = severity;
             StatusInfoBar.IsOpen = true;
         }
@@ -3268,7 +3378,7 @@ namespace FasterWhisperGui.Views
 
         private void BeginConsoleProgress(string unitLabel = "Parte")
         {
-            consoleProgressUnitLabel = unitLabel;
+            consoleProgressUnitLabel = LocalizationService.Get(unitLabel);
             ConsoleLiveProgressPanel.Visibility = Visibility.Visible;
             UpdateConsoleProgress(new ProgressUpdate("transcription", 0, 0, 0, 1, selectedAudioFiles.Count));
         }
@@ -3285,7 +3395,7 @@ namespace FasterWhisperGui.Views
                 ? $"{consoleProgressUnitLabel} {progress.Part}/{progress.Parts} · "
                 : string.Empty;
             ConsoleLiveProgressText.Text =
-                $"{partPrefix}Sbobinatura {normalizedPercent,3:0}% |" +
+                $"{partPrefix}{LocalizationService.Get("Sbobinatura")} {normalizedPercent,3:0}% |" +
                 new string('█', completedCells) +
                 new string('░', barWidth - completedCells) +
                 "|";
@@ -3411,6 +3521,8 @@ namespace FasterWhisperGui.Views
         private void AppendConsoleEvent(string category, string message, string brushKey)
         {
             const int maxCharacters = 30_000;
+            category = LocalizationService.TranslateDynamic(category);
+            message = LocalizationService.TranslateDynamic(message);
             ConsoleEmptyText.Visibility = Visibility.Collapsed;
 
             var paragraph = new Paragraph
