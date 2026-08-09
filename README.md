@@ -273,6 +273,7 @@ necessario per l’uso quotidiano.
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
 `setup-backend.ps1` esegue la stessa preparazione per l’ambiente di sviluppo;

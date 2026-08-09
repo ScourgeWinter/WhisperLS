@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
 
 jobs:
   verify:
@@ -18,12 +22,15 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt ruff
+          python -m pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Test and lint Python
+      - name: Test Python
         run: |
           python -m unittest discover -s tests -v
           python -m py_compile Whisper.py run.py
+
+      - name: Lint Python
+        run: |
           ruff check Whisper.py run.py tests
 
       - uses: actions/setup-dotnet@v4

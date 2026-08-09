@@ -44,14 +44,26 @@ jobs:
           }
           "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Test
+      - name: Installa dipendenze Python
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt ruff
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Test Python
+        run: |
           python -m unittest discover -s tests -v
           python -m py_compile Whisper.py run.py tools/build_release.py
+
+      - name: Lint Python
+        run: |
           ruff check Whisper.py run.py tests tools/build_release.py
+
+      - name: Compila WinUI
+        run: |
           dotnet build FasterWhisperGui\FasterWhisperGui.csproj -p:Platform=x64
+
+      - name: Compila updater
+        run: |
           dotnet build WhisperLS.Updater\WhisperLS.Updater.csproj -c Release
 
       - name: Costruisci asset Full, Light e Portable

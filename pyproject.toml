@@ -1,0 +1,7 @@
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+# Mantiene esplicito e stabile il contratto CI anche quando Ruff introduce
+# nuove famiglie di regole nelle versioni successive.
+select = ["E4", "E7", "E9", "F"]
