@@ -17,6 +17,7 @@ import threading
 import time
 import shutil
 import uuid
+import hashlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from huggingface_hub import constants as hf_constants
@@ -446,7 +447,8 @@ def _write_srt(path: Path, segments, *, word_timestamps: bool) -> None:
 def output_lock(directory: Path, name: str):
     """OS-owned locks survive neither a crash nor process termination."""
     directory.mkdir(parents=True, exist_ok=True)
-    with (directory / f".{name}.whisperls.lock").open("a+b") as lock:
+    lock_key = hashlib.sha256(os.path.normcase(name).encode("utf-8")).hexdigest()
+    with (directory / f".whisperls-output-{lock_key}.lock").open("a+b") as lock:
         if lock.tell() == 0:
             lock.write(b"0")
             lock.flush()
@@ -550,7 +552,7 @@ def _write_transcription_outputs_unlocked(
 
     transaction_id = uuid.uuid4().hex
     temporary_paths = {
-        kind: path.with_name(f".{path.name}.{transaction_id}.tmp")
+        kind: output_directory / f".whisperls-{transaction_id}.{kind}.tmp"
         for kind, path in final_paths.items()
         if kind in selected_formats
     }
@@ -573,7 +575,7 @@ def _write_transcription_outputs_unlocked(
         for kind in selected_formats:
             final_path = final_paths[kind]
             if overwrite and final_path.exists():
-                backup = final_path.with_name(f".{final_path.name}.{transaction_id}.bak")
+                backup = output_directory / f".whisperls-{transaction_id}.{kind}.bak"
                 shutil.copy2(final_path, backup)
                 backups[kind] = backup
             if overwrite:
