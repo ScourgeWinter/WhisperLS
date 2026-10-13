@@ -1,4 +1,4 @@
-# WhisperLS 1.1.0
+# WhisperLS 1.1.1
 
 **Italiano** · [English](README.en.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Português](README.pt.md)
 
@@ -23,9 +23,9 @@ Apri la sezione **Releases** del repository e scegli il pacchetto adatto:
 
 | Pacchetto | Per chi è pensato | CUDA inclusa |
 |---|---|---:|
-| `WhisperLS-Setup-1.1.0-Full-x64.exe` | Scelta consigliata per la maggior parte degli utenti | Sì |
-| `WhisperLS-Setup-1.1.0-Light-x64.exe` | Computer senza GPU NVIDIA o sistemi già configurati | No |
-| `WhisperLS-Portable-1.1.0-Full-x64.zip` | Uso senza installazione | Sì |
+| `WhisperLS-Setup-1.1.1-Full-x64.exe` | Scelta consigliata per la maggior parte degli utenti | Sì |
+| `WhisperLS-Setup-1.1.1-Light-x64.exe` | Computer senza GPU NVIDIA o sistemi già configurati | No |
+| `WhisperLS-Portable-1.1.1-Full-x64.zip` | Uso senza installazione | Sì |
 
 Le edizioni ufficiali includono un runtime Python privato: **non devi installare
 Python, FFmpeg o le dipendenze manualmente**. I modelli vengono scaricati

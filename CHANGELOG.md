@@ -15,6 +15,15 @@ follows [Semantic Versioning](https://semver.org/).
   release tags.
 - Expanded public-repository ignore rules for local IDE and coding-agent files.
 
+## [1.1.1] - 2026-10-13
+
+### Fixed
+
+- Included the application's WinUI resource index in unpackaged publish output,
+  fixing the immediate startup crash in the portable release.
+- Preserved separate compiled XAML files when publishing Debug builds.
+- Release packaging now fails if `WhisperLS.pri` is missing or empty.
+
 ## [1.1.0] - 2026-08-09
 
 ### Added
