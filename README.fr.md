@@ -1,4 +1,4 @@
-# WhisperLS 1.1.0
+# WhisperLS 1.1.1
 
 [Italiano](README.md) · [English](README.en.md) · **Français** · [Español](README.es.md) · [Deutsch](README.de.md) · [Português](README.pt.md)
 
@@ -18,9 +18,9 @@ manuelle.
 
 | Paquet | Utilisation conseillée | CUDA inclus |
 |---|---|---:|
-| `WhisperLS-Setup-1.1.0-Full-x64.exe` | Choix recommandé, notamment avec une carte NVIDIA | Oui |
-| `WhisperLS-Setup-1.1.0-Light-x64.exe` | Processeur seul ou CUDA déjà configuré | Non |
-| `WhisperLS-Portable-1.1.0-Full-x64.zip` | Utilisation sans installation | Oui |
+| `WhisperLS-Setup-1.1.1-Full-x64.exe` | Choix recommandé, notamment avec une carte NVIDIA | Oui |
+| `WhisperLS-Setup-1.1.1-Light-x64.exe` | Processeur seul ou CUDA déjà configuré | Non |
+| `WhisperLS-Portable-1.1.1-Full-x64.zip` | Utilisation sans installation | Oui |
 
 Les paquets officiels incluent Python et FFmpeg. Le pilote NVIDIA reste à la
 charge de l’utilisateur. La version n’étant pas signée numériquement, utilisez

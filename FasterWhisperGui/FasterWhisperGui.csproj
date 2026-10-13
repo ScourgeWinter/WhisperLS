@@ -46,6 +46,32 @@
       <Copy SourceFiles="..\WhisperLS.Updater\bin\$(Configuration)\net10.0-windows\win-x64\publish\WhisperLS.Updater.exe" DestinationFolder="$(OutDir)" />
     </Target>
 
+    <!-- Unpackaged WinUI builds generate the PRI but do not add it to dotnet publish. -->
+    <Target Name="PublishWhisperLSResources"
+            BeforeTargets="ComputeResolvedFilesToPublishList"
+            DependsOnTargets="_GenerateProjectPriFile"
+            Condition="'$(WindowsPackageType)' == 'None' and '$(DesignTimeBuild)' != 'true'">
+      <Error Condition="!Exists('$(ProjectPriFullPath)')"
+             Text="The WinUI resource index was not generated: $(ProjectPriFullPath)." />
+      <ItemGroup>
+        <ResolvedFileToPublish Include="$(ProjectPriFullPath)">
+          <RelativePath>$(ProjectPriFileName)</RelativePath>
+          <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </ResolvedFileToPublish>
+      </ItemGroup>
+    </Target>
+
+    <!-- Debug builds keep XBFs outside the PRI; preserve their relative paths. -->
+    <Target Name="PublishWhisperLSLooseXamlResources" AfterTargets="Publish"
+            Condition="'$(WindowsPackageType)' == 'None' and '$(DisableEmbeddedXbf)' == 'true'">
+      <ItemGroup>
+        <_WhisperLSXbf Include="$(TargetDir)**\*.xbf" />
+      </ItemGroup>
+      <Copy SourceFiles="@(_WhisperLSXbf)"
+            DestinationFiles="@(_WhisperLSXbf->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+            SkipUnchangedFiles="true" />
+    </Target>
+
     <ItemGroup>
         <None Remove="FasterWhisperGui.slnx" />
     </ItemGroup>

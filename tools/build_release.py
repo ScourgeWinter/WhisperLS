@@ -75,7 +75,18 @@ def publish_app(root: Path, destination: Path) -> None:
         "dotnet", "publish", str(gui_project), "-c", "Release", "-p:Platform=x64",
         "-r", "win-x64", "--self-contained", "true", "-o", str(destination), cwd=root,
     )
+    validate_gui_payload(destination)
     shutil.copy2(updater_output / "WhisperLS.Updater.exe", destination / "WhisperLS.Updater.exe")
+
+
+def validate_gui_payload(destination: Path) -> None:
+    """Refuse to ship an unpackaged WinUI app without its compiled resources."""
+    resource_index = destination / "WhisperLS.pri"
+    if not resource_index.is_file() or resource_index.stat().st_size == 0:
+        raise RuntimeError(
+            "WinUI resource index WhisperLS.pri is missing or empty in the publish "
+            "directory. Refusing to build a release that crashes at startup."
+        )
 
 
 def make_zip(source: Path, destination: Path) -> None:
@@ -114,7 +125,7 @@ def write_update_manifest(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", default="1.1.0")
+    parser.add_argument("--version", default="1.1.1")
     parser.add_argument("--skip-installers", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
