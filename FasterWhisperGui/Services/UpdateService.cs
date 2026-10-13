@@ -115,8 +115,11 @@ internal sealed class UpdateService
             throw new InvalidDataException("Il manifest non appartiene alla release richiesta.");
         }
         await DownloadFileAsync(candidate.PayloadUrl, payloadPath, progress, token);
-        await using var payloadStream = File.OpenRead(payloadPath);
-        var actualHash = Convert.ToHexString(await SHA256.HashDataAsync(payloadStream, token));
+        string actualHash;
+        await using (var payloadStream = File.OpenRead(payloadPath))
+        {
+            actualHash = Convert.ToHexString(await SHA256.HashDataAsync(payloadStream, token));
+        }
         if (!string.Equals(actualHash, manifest.PayloadSha256, StringComparison.OrdinalIgnoreCase))
         {
             File.Delete(payloadPath);

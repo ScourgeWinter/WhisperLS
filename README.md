@@ -1,4 +1,4 @@
-# WhisperLS 1.1.1
+# WhisperLS 1.1.2
 
 **Italiano** · [English](README.en.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Português](README.pt.md)
 
@@ -23,9 +23,9 @@ Apri la sezione **Releases** del repository e scegli il pacchetto adatto:
 
 | Pacchetto | Per chi è pensato | CUDA inclusa |
 |---|---|---:|
-| `WhisperLS-Setup-1.1.1-Full-x64.exe` | Scelta consigliata per la maggior parte degli utenti | Sì |
-| `WhisperLS-Setup-1.1.1-Light-x64.exe` | Computer senza GPU NVIDIA o sistemi già configurati | No |
-| `WhisperLS-Portable-1.1.1-Full-x64.zip` | Uso senza installazione | Sì |
+| `WhisperLS-Setup-1.1.2-Full-x64.exe` | Scelta consigliata per la maggior parte degli utenti | Sì |
+| `WhisperLS-Setup-1.1.2-Light-x64.exe` | Computer senza GPU NVIDIA o sistemi già configurati | No |
+| `WhisperLS-Portable-1.1.2-Full-x64.zip` | Uso senza installazione | Sì |
 
 Le edizioni ufficiali includono un runtime Python privato: **non devi installare
 Python, FFmpeg o le dipendenze manualmente**. I modelli vengono scaricati
@@ -36,6 +36,14 @@ mostrare “Autore sconosciuto”: verifica di aver scaricato il file dalla rele
 ufficiale e, se vuoi, confronta l’hash con `SHA256SUMS.txt`.
 
 ### Full o Light?
+
+Un PC con processore AMD può trascrivere usando la **CPU**. Se possiedi una
+Radeon e non una GPU NVIDIA, scegli **Light** e il dispositivo **CPU** (oppure
+Automatico, che ripiega sulla CPU). Le GPU Radeon non sono accelerate dal
+backend Windows precompilato incluso: l'opzione GPU usa NVIDIA/CUDA.
+
+Da questa versione, anche Windows App SDK/WinUI è incluso nei pacchetti;
+non serve installare Windows App Runtime separatamente.
 
 - Scegli **Full** se possiedi una GPU NVIDIA o vuoi un pacchetto autonomo. Include
   cuBLAS e cuDNN; è più grande ma evita configurazioni CUDA manuali.

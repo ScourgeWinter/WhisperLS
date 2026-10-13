@@ -45,3 +45,6 @@ jobs:
 
       - name: Build updater
         run: dotnet build WhisperLS.Updater\WhisperLS.Updater.csproj -c Release
+
+      - name: Test updater and queue recovery
+        run: dotnet run --project tests\WhisperLS.IntegrationTests\WhisperLS.IntegrationTests.csproj -c Release

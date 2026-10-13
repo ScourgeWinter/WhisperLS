@@ -15,6 +15,22 @@ follows [Semantic Versioning](https://semver.org/).
   release tags.
 - Expanded public-repository ignore rules for local IDE and coding-agent files.
 
+## [1.1.2] - 2026-10-13
+
+### Fixed
+
+- Bundled Windows App SDK so Windows App Runtime is no longer a separate prerequisite.
+- Fixed lowercase update manifests and preserved/restored additions, replacements and removals with a recovery journal.
+- Retained interrupted queues when the worker fails or reports incomplete jobs.
+- Checked checkpoint source identity and reserved checkpoint filenames without replacing existing jobs.
+- Prevented concurrent output replacement and rolled back partially published output formats.
+- Released update payload file handles before removing rejected downloads.
+
+### Changed
+
+- Added updater/queue integration checks to CI and release builds, plus backend concurrency regressions.
+- Documented AMD CPU support and the lack of Radeon acceleration in the bundled Windows backend.
+
 ## [1.1.1] - 2026-10-13
 
 ### Fixed

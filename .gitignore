@@ -23,6 +23,7 @@ obj/
 **/bin/
 **/obj/
 artifacts/
+work/integration-fixtures/
 *.user
 *.rsuser
 *.suo

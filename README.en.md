@@ -1,4 +1,4 @@
-# WhisperLS 1.1.1
+# WhisperLS 1.1.2
 
 [Italiano](README.md) · **English** · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Português](README.pt.md)
 
@@ -21,9 +21,9 @@ Open the repository **Releases** page and choose:
 
 | Package | Recommended use | CUDA included |
 |---|---|---:|
-| `WhisperLS-Setup-1.1.1-Full-x64.exe` | Recommended for most users and NVIDIA GPUs | Yes |
-| `WhisperLS-Setup-1.1.1-Light-x64.exe` | CPU systems or machines with CUDA already configured | No |
-| `WhisperLS-Portable-1.1.1-Full-x64.zip` | Run without installation | Yes |
+| `WhisperLS-Setup-1.1.2-Full-x64.exe` | Recommended for most users and NVIDIA GPUs | Yes |
+| `WhisperLS-Setup-1.1.2-Light-x64.exe` | CPU systems or machines with CUDA already configured | No |
+| `WhisperLS-Portable-1.1.2-Full-x64.zip` | Run without installation | Yes |
 
 Official packages include a private Python runtime. You do not need to install
 Python, FFmpeg or dependencies manually. NVIDIA drivers are not bundled.
