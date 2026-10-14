@@ -5,23 +5,32 @@ namespace WhisperLS.Updater;
 
 internal static class Program
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true
+    };
 
     private static int Main(string[] args)
     {
+        string? installDirectory = null;
+        string? appExecutable = null;
+        string? backupDirectory = null;
+        bool appExited = false;
         try
         {
             var options = ParseArguments(args);
-            var installDirectory = RequireDirectory(options, "install-dir");
+            installDirectory = RequireDirectory(options, "install-dir");
             var stagingDirectory = RequireDirectory(options, "staging-dir");
-            var backupDirectory = Path.GetFullPath(Require(options, "backup-dir"));
-            var appExecutable = Require(options, "app-exe");
+            backupDirectory = Path.GetFullPath(Require(options, "backup-dir"));
+            appExecutable = Require(options, "app-exe");
             var manifestPath = Path.GetFullPath(Require(options, "manifest"));
             var waitPid = int.Parse(Require(options, "wait-pid"));
 
             WaitForExit(waitPid);
+            appExited = true;
             EnsureChildPath(installDirectory, backupDirectory);
-            var manifest = JsonSerializer.Deserialize<UpdateManifest>(File.ReadAllText(manifestPath))
+            var manifest = JsonSerializer.Deserialize<UpdateManifest>(File.ReadAllText(manifestPath), JsonOptions)
                 ?? throw new InvalidOperationException("Manifest aggiornamento non valido.");
             ApplyUpdate(installDirectory, stagingDirectory, backupDirectory, manifest);
             WriteConfirmationMarker(backupDirectory, manifest.Version);
@@ -42,6 +51,27 @@ internal static class Program
         catch (Exception exception)
         {
             WriteFailureLog(exception);
+            if (appExited && installDirectory is not null && appExecutable is not null)
+            {
+                try
+                {
+                    if (backupDirectory is not null)
+                    {
+                        EnsureChildPath(installDirectory, backupDirectory);
+                        RestoreJournal(installDirectory, backupDirectory);
+                    }
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = SafeCombine(installDirectory, appExecutable),
+                        WorkingDirectory = installDirectory,
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception recoveryException)
+                {
+                    WriteFailureLog(new AggregateException(exception, recoveryException));
+                }
+            }
             return 1;
         }
     }
@@ -52,12 +82,44 @@ internal static class Program
         string backupDirectory,
         UpdateManifest manifest)
     {
+        if (string.IsNullOrWhiteSpace(manifest.Version) || manifest.Files is null || manifest.Files.Length == 0)
+        {
+            throw new InvalidDataException("Versione o lista dei file assente nel manifest.");
+        }
+        EnsureChildPath(installDirectory, backupDirectory);
+        var operations = manifest.Files.Concat(manifest.RemoveFiles ?? []).ToArray();
+        var destinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in operations)
+        {
+            var destination = SafeCombine(installDirectory, path);
+            if (!destinations.Add(destination) || Directory.Exists(destination) ||
+                destination.Equals(Path.GetFullPath(backupDirectory), StringComparison.OrdinalIgnoreCase) || destination.StartsWith(
+                Path.GetFullPath(backupDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Percorso duplicato o riservato nel manifest.");
+            }
+        }
+        foreach (var path in manifest.Files)
+        {
+            if (!File.Exists(SafeCombine(stagingDirectory, path)))
+                throw new FileNotFoundException("File di aggiornamento mancante.", path);
+        }
+        RestoreJournal(installDirectory, backupDirectory);
         if (Directory.Exists(backupDirectory))
         {
             Directory.Delete(backupDirectory, recursive: true);
         }
         Directory.CreateDirectory(backupDirectory);
-        var replaced = new List<string>();
+        var entries = operations.Select(path => new JournalEntry(path, File.Exists(SafeCombine(installDirectory, path)))).ToArray();
+        foreach (var entry in entries.Where(entry => entry.Existed))
+        {
+            var backup = SafeCombine(backupDirectory, entry.Path);
+            Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+            File.Copy(SafeCombine(installDirectory, entry.Path), backup, overwrite: true);
+        }
+        var journal = new UpdateJournal(entries, []);
+        SaveJournal(backupDirectory, journal);
         try
         {
             foreach (var relativePath in manifest.Files)
@@ -68,42 +130,59 @@ internal static class Program
                 {
                     throw new FileNotFoundException("File di aggiornamento mancante.", source);
                 }
-                if (File.Exists(destination))
-                {
-                    var backup = SafeCombine(backupDirectory, relativePath);
-                    Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
-                    File.Copy(destination, backup, overwrite: true);
-                }
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                journal = journal with { Touched = [.. journal.Touched, relativePath] };
+                SaveJournal(backupDirectory, journal);
                 File.Copy(source, destination, overwrite: true);
-                replaced.Add(relativePath);
             }
             foreach (var relativePath in manifest.RemoveFiles ?? [])
             {
                 var destination = SafeCombine(installDirectory, relativePath);
                 if (File.Exists(destination))
                 {
-                    var backup = SafeCombine(backupDirectory, relativePath);
-                    Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
-                    File.Copy(destination, backup, overwrite: true);
+                    journal = journal with { Touched = [.. journal.Touched, relativePath] };
+                    SaveJournal(backupDirectory, journal);
                     File.Delete(destination);
                 }
             }
         }
         catch
         {
-            foreach (var relativePath in replaced)
-            {
-                var backup = SafeCombine(backupDirectory, relativePath);
-                var destination = SafeCombine(installDirectory, relativePath);
-                if (File.Exists(backup))
-                {
-                    File.Copy(backup, destination, overwrite: true);
-                }
-            }
+            RestoreJournal(installDirectory, backupDirectory);
             throw;
         }
     }
+
+    private static void SaveJournal(string backupDirectory, UpdateJournal journal)
+    {
+        var path = Path.Combine(backupDirectory, ".update-journal.json");
+        File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(journal, JsonOptions));
+        File.Move(path + ".tmp", path, overwrite: true);
+    }
+
+    private static void RestoreJournal(string installDirectory, string backupDirectory)
+    {
+        var path = Path.Combine(backupDirectory, ".update-journal.json");
+        if (!File.Exists(path)) return;
+        var journal = JsonSerializer.Deserialize<UpdateJournal>(File.ReadAllText(path), JsonOptions)
+            ?? throw new InvalidDataException("Journal di recupero non valido.");
+        foreach (var touched in journal.Touched.Reverse())
+        {
+            var entry = journal.Entries.Single(entry => entry.Path == touched);
+            var destination = SafeCombine(installDirectory, touched);
+            if (entry.Existed)
+            {
+                var backup = SafeCombine(backupDirectory, touched);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                File.Copy(backup, destination, overwrite: true);
+            }
+            else File.Delete(destination);
+        }
+        SaveJournal(backupDirectory, journal with { Touched = [] });
+    }
+
+    private sealed record JournalEntry(string Path, bool Existed);
+    private sealed record UpdateJournal(JournalEntry[] Entries, string[] Touched);
 
     private static void WaitForExit(int processId)
     {
@@ -160,30 +239,7 @@ internal static class Program
         {
             return;
         }
-        foreach (var relativePath in manifest.Files)
-        {
-            var backup = SafeCombine(backupDirectory, relativePath);
-            var destination = SafeCombine(installDirectory, relativePath);
-            if (File.Exists(backup))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(backup, destination, overwrite: true);
-            }
-            else
-            {
-                File.Delete(destination);
-            }
-        }
-        foreach (var relativePath in manifest.RemoveFiles ?? [])
-        {
-            var backup = SafeCombine(backupDirectory, relativePath);
-            var destination = SafeCombine(installDirectory, relativePath);
-            if (File.Exists(backup))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(backup, destination, overwrite: true);
-            }
-        }
+        RestoreJournal(installDirectory, backupDirectory);
         File.Delete(marker);
         Process.Start(new ProcessStartInfo
         {
@@ -238,12 +294,17 @@ internal static class Program
 
     private static void WriteFailureLog(Exception exception)
     {
+        try
+        {
         var directory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WhisperLS",
             "Logs");
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "updater-error.log"), exception.ToString());
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private sealed record UpdateManifest(string Version, string[] Files, string[]? RemoveFiles);

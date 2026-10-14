@@ -87,6 +87,9 @@ def validate_gui_payload(destination: Path) -> None:
             "WinUI resource index WhisperLS.pri is missing or empty in the publish "
             "directory. Refusing to build a release that crashes at startup."
         )
+    for name in ("Microsoft.UI.Xaml.dll", "Microsoft.WindowsAppRuntime.dll"):
+        if not (destination / name).is_file():
+            raise RuntimeError(f"Bundled Windows App SDK component missing: {name}")
 
 
 def make_zip(source: Path, destination: Path) -> None:
@@ -125,7 +128,7 @@ def write_update_manifest(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", default="1.1.1")
+    parser.add_argument("--version", default="1.1.2")
     parser.add_argument("--skip-installers", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

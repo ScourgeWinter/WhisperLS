@@ -1,4 +1,4 @@
-# WhisperLS 1.1.1
+# WhisperLS 1.1.2
 
 [Italiano](README.md) · [English](README.en.md) · [Français](README.fr.md) · [Español](README.es.md) · **Deutsch** · [Português](README.pt.md)
 
@@ -18,9 +18,9 @@ Audio umgewandelt werden.
 
 | Paket | Empfohlene Verwendung | CUDA enthalten |
 |---|---|---:|
-| `WhisperLS-Setup-1.1.1-Full-x64.exe` | Empfohlen, insbesondere für NVIDIA-GPUs | Ja |
-| `WhisperLS-Setup-1.1.1-Light-x64.exe` | CPU-Systeme oder bereits eingerichtetes CUDA | Nein |
-| `WhisperLS-Portable-1.1.1-Full-x64.zip` | Verwendung ohne Installation | Ja |
+| `WhisperLS-Setup-1.1.2-Full-x64.exe` | Empfohlen, insbesondere für NVIDIA-GPUs | Ja |
+| `WhisperLS-Setup-1.1.2-Light-x64.exe` | CPU-Systeme oder bereits eingerichtetes CUDA | Nein |
+| `WhisperLS-Portable-1.1.2-Full-x64.zip` | Verwendung ohne Installation | Ja |
 
 Die offiziellen Pakete enthalten Python und FFmpeg. Der NVIDIA-Treiber ist nicht
 enthalten. Da diese Version nicht digital signiert ist, sollte sie nur aus dem

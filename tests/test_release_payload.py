@@ -26,4 +26,13 @@ class ReleasePayloadTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             payload = Path(directory)
             (payload / "WhisperLS.pri").write_bytes(b"compiled application resources")
+            (payload / "Microsoft.UI.Xaml.dll").write_bytes(b"bundled WinUI")
+            (payload / "Microsoft.WindowsAppRuntime.dll").write_bytes(b"bundled runtime")
             validate_gui_payload(payload)
+
+    def test_external_windows_runtime_is_not_sufficient(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory)
+            (payload / "WhisperLS.pri").write_bytes(b"resources")
+            with self.assertRaisesRegex(RuntimeError, "Windows App SDK"):
+                validate_gui_payload(payload)

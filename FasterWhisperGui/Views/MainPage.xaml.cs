@@ -2736,7 +2736,7 @@ namespace FasterWhisperGui.Views
                     outputName,
                     clipStart = interval?.Start,
                     clipEnd = interval?.End,
-                    resumeCheckpoint = File.Exists(checkpoint) ? checkpoint : null,
+                    resumeCheckpoint = QueueRecovery.CheckpointMatches(checkpoint, queueJob.Sources) ? checkpoint : null,
                     autoRename = true
                 };
             }).ToArray();
@@ -2791,7 +2791,7 @@ namespace FasterWhisperGui.Views
             var failed = states.Count(state => state == "fallita");
             var completed = states.Count(state => state == "completata");
             var cancelled = states.Count(state => state == "annullata");
-            if (result.ExitCode == 0 || failed == 0)
+            if (QueueRecovery.CanDiscard(result.ExitCode, result.BackendOperation, states))
             {
                 File.Delete(PendingQueuePath);
                 File.Delete(controlPath);
@@ -2801,6 +2801,10 @@ namespace FasterWhisperGui.Views
             else
             {
                 CompleteConsoleProgress(succeeded: false);
+                RestoreQueueButton.Visibility = Visibility.Visible;
+                currentBatchJobId = null;
+                throw new InvalidOperationException(
+                    $"La coda non è stata completata. È disponibile il ripristino. {result.LastLine}");
             }
             lastOutputDirectory = selectedOutputDirectory ?? Path.GetDirectoryName(selectedAudioFile!);
             OpenOutputButton.Visibility = Visibility.Visible;
@@ -3059,6 +3063,8 @@ namespace FasterWhisperGui.Views
                 };
                 startInfo.Environment["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1";
                 startInfo.Environment["WHISPERLS_PROGRESS"] = "1";
+                startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
+                startInfo.Environment["PYTHONUTF8"] = "1";
                 var runtimeRoot = Path.GetDirectoryName(pythonExecutable);
                 if (!string.IsNullOrWhiteSpace(runtimeRoot) &&
                     pythonExecutable.StartsWith(AppContext.BaseDirectory, StringComparison.OrdinalIgnoreCase))

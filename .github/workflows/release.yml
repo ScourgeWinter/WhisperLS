@@ -9,7 +9,7 @@ on:
       version:
         description: "Versione semantica senza prefisso v"
         required: true
-        default: "1.1.1"
+        default: "1.1.2"
 
 permissions:
   contents: write
@@ -65,6 +65,9 @@ jobs:
       - name: Compila updater
         run: |
           dotnet build WhisperLS.Updater\WhisperLS.Updater.csproj -c Release
+
+      - name: Verifica aggiornamenti e recupero coda
+        run: dotnet run --project tests\WhisperLS.IntegrationTests\WhisperLS.IntegrationTests.csproj -c Release
 
       - name: Costruisci asset Full, Light e Portable
         run: python tools/build_release.py --version "${{ steps.version.outputs.value }}"

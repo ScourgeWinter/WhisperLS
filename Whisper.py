@@ -15,6 +15,10 @@ from types import SimpleNamespace
 import json
 import threading
 import time
+import shutil
+import uuid
+import hashlib
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from huggingface_hub import constants as hf_constants
 
@@ -405,7 +409,9 @@ def choose_available_output_name(
     base_name = validate_output_name(requested_name)
     candidate = base_name
     index = 2
-    while any((output_directory / f"{candidate}.{kind}").exists() for kind in output_formats):
+    while (output_directory / f"{candidate}.whisperls.json").exists() or any(
+        (output_directory / f"{candidate}.{kind}").exists() for kind in output_formats
+    ):
         candidate = f"{base_name} ({index})"
         index += 1
     return candidate
@@ -437,7 +443,43 @@ def _write_srt(path: Path, segments, *, word_timestamps: bool) -> None:
             output.write(text + "\n\n")
 
 
-def write_transcription_outputs(
+@contextmanager
+def output_lock(directory: Path, name: str):
+    """OS-owned locks survive neither a crash nor process termination."""
+    directory.mkdir(parents=True, exist_ok=True)
+    lock_key = hashlib.sha256(os.path.normcase(name).encode("utf-8")).hexdigest()
+    with (directory / f".whisperls-output-{lock_key}.lock").open("a+b") as lock:
+        if lock.tell() == 0:
+            lock.write(b"0")
+            lock.flush()
+        lock.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise RuntimeError("Un'altra istanza sta scrivendo questo output.") from exc
+        try:
+            yield
+        finally:
+            lock.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+def write_transcription_outputs(audio_path: Path, segments, **kwargs):
+    directory = kwargs.get("output_dir") or audio_path.parent
+    name = validate_output_name(kwargs.get("output_name") or audio_path.stem + "_trascrizione")
+    with output_lock(directory, name):
+        return _write_transcription_outputs_unlocked(audio_path, segments, **kwargs)
+
+
+def _write_transcription_outputs_unlocked(
     audio_path: Path,
     segments,
     *,
@@ -508,11 +550,15 @@ def write_transcription_outputs(
             context_paragraphs = [linear_text] if linear_text else []
         paragraph_text = "\n\n".join(context_paragraphs)
 
+    transaction_id = uuid.uuid4().hex
     temporary_paths = {
-        kind: path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        kind: output_directory / f".whisperls-{transaction_id}.{kind}.tmp"
         for kind, path in final_paths.items()
         if kind in selected_formats
     }
+    backups = {}
+    published = []
+    cleanup_backups = True
     try:
         if "txt" in temporary_paths:
             temporary_paths["txt"].write_text(
@@ -528,13 +574,37 @@ def write_transcription_outputs(
             )
         for kind in selected_formats:
             final_path = final_paths[kind]
-            os.replace(temporary_paths[kind], final_path)
+            if overwrite and final_path.exists():
+                backup = output_directory / f".whisperls-{transaction_id}.{kind}.bak"
+                shutil.copy2(final_path, backup)
+                backups[kind] = backup
+            if overwrite:
+                os.replace(temporary_paths[kind], final_path)
+            elif os.name == "nt":
+                # Windows rename fails atomically if the destination already exists.
+                os.rename(temporary_paths[kind], final_path)
+            else:
+                os.link(temporary_paths[kind], final_path)
+                temporary_paths[kind].unlink()
+            published.append(kind)
+    except BaseException:
+        cleanup_backups = False
+        for kind in reversed(published):
+            if kind in backups:
+                os.replace(backups[kind], final_paths[kind])
+            else:
+                final_paths[kind].unlink(missing_ok=True)
+        cleanup_backups = True
+        raise
     finally:
         for temporary_path in temporary_paths.values():
             try:
                 temporary_path.unlink(missing_ok=True)
             except OSError:
                 pass
+        if cleanup_backups:
+            for backup in backups.values():
+                backup.unlink(missing_ok=True)
 
     return (
         final_paths["txt"] if "txt" in selected_formats else None,
@@ -1234,6 +1304,11 @@ def _manifest_job_arguments(job: dict) -> list[str]:
         raise ValueError("Un lavoro della coda non contiene file sorgente.")
     arguments = []
     if job.get("resumeCheckpoint"):
+        _, checkpoint = TranscriptionCheckpoint.from_file(Path(job["resumeCheckpoint"]))
+        expected = [os.path.normcase(str(Path(path).resolve())) for path in sources]
+        actual = [os.path.normcase(str(Path(item["path"]).resolve())) for item in checkpoint["sources"]]
+        if sources and expected != actual:
+            raise ValueError("Il checkpoint appartiene a file sorgente diversi dal lavoro selezionato.")
         arguments.extend(["--resume-checkpoint", str(job["resumeCheckpoint"])])
     else:
         arguments.extend([sources[0], str(job.get("model") or DEFAULT_MODEL)])
@@ -1497,6 +1572,9 @@ def main():
                 clip_start=args.clip_start,
                 clip_end=args.clip_end,
             )
+            # Reserve the checkpoint before any write; another instance must not replace it.
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+            checkpoint_path.touch(exist_ok=False)
             checkpoint.flush()
             print("Checkpoint di recupero attivo.")
         except OSError as exc:
@@ -1782,4 +1860,7 @@ def main():
         os._exit(0)
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     main()
