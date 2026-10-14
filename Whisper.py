@@ -1573,6 +1573,7 @@ def main():
                 clip_end=args.clip_end,
             )
             # Reserve the checkpoint before any write; another instance must not replace it.
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
             checkpoint_path.touch(exist_ok=False)
             checkpoint.flush()
             print("Checkpoint di recupero attivo.")
@@ -1859,4 +1860,7 @@ def main():
         os._exit(0)
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     main()

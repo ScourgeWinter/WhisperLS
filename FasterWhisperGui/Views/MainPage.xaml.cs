@@ -3063,6 +3063,8 @@ namespace FasterWhisperGui.Views
                 };
                 startInfo.Environment["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1";
                 startInfo.Environment["WHISPERLS_PROGRESS"] = "1";
+                startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
+                startInfo.Environment["PYTHONUTF8"] = "1";
                 var runtimeRoot = Path.GetDirectoryName(pythonExecutable);
                 if (!string.IsNullOrWhiteSpace(runtimeRoot) &&
                     pythonExecutable.StartsWith(AppContext.BaseDirectory, StringComparison.OrdinalIgnoreCase))

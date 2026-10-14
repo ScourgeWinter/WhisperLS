@@ -100,3 +100,30 @@ class ReliabilityTests(unittest.TestCase):
                 self.assertIn(b"RuntimeError", result.stderr)
             result = subprocess.run(command, capture_output=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_main_creates_a_new_output_directory_before_reserving_checkpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "audio.wav"
+            source.write_bytes(b"audio")
+            output = root / "new" / "output"
+            model = SimpleNamespace(transcribe=lambda *args, **kwargs: (
+                [SimpleNamespace(start=0, end=1, text="Prova", words=[])],
+                SimpleNamespace(language="it", language_probability=1, duration=1)))
+            with patch.object(sys, "argv", ["Whisper.py", str(source), "tiny", "--device", "cpu",
+                "--output-dir", str(output), "--output-format", "txt"]), \
+                patch.object(Whisper, "resolve_model_path_with_progress", return_value="model"), \
+                patch.object(Whisper, "create_model", return_value=(model, "cpu", "int8")):
+                Whisper.main()
+            self.assertTrue((output / "audio_trascrizione.txt").is_file())
+            self.assertFalse((output / "audio_trascrizione.whisperls.json").exists())
+
+    def test_cli_emits_utf8_even_with_a_legacy_windows_environment(self):
+        backend = Path(Whisper.__file__).resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            source = str(Path(directory) / "inesistente è.wav")
+            environment = dict(Whisper.os.environ, PYTHONIOENCODING="cp1252")
+            result = subprocess.run([sys.executable, str(backend), source],
+                capture_output=True, env=environment, timeout=15)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("è.wav", result.stdout.decode("utf8"))
